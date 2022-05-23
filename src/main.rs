@@ -5,7 +5,7 @@ mod camera3d;
 
 fn main() {
     App::new()
-        .insert_resource(Msaa {samples: 4})
+        .insert_resource(Msaa { samples: 4 })
         .insert_resource(WindowDescriptor {
             title: "Bevy Demo".to_string(),
             width: 1280.0,
@@ -13,9 +13,9 @@ fn main() {
             mode: WindowMode::Windowed,
             ..Default::default()
         })
-        .insert_resource(ClearColor { 0: Color::rgb(0.1, 0.1, 0.1)})
+        .insert_resource(ClearColor { 0: Color::rgb(0.1, 0.1, 0.1) })
         .add_plugins(DefaultPlugins)
-        .add_plugin(ModelViewerPlugin)
+        //.add_plugin(ModelViewerPlugin)
         .add_plugin(AnimatedTextPlugin)
         .add_plugin(AnimatedSpritePlugin)
         .run();
@@ -25,14 +25,15 @@ pub struct AnimatedTextPlugin;
 
 impl Plugin for AnimatedTextPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(setup_animated_text)
+        app.add_startup_system(animated_text_setup)
             .add_system(animated_text_system);
     }
 }
 
-fn setup_animated_text(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn animated_text_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // 2d camera
-    commands.spawn_bundle(UiCameraBundle::default());
+    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+
     commands.spawn_bundle(Text2dBundle {
         text: Text::with_section(
             "Some Text",
@@ -64,7 +65,7 @@ pub struct AnimatedSpritePlugin;
 
 impl Plugin for AnimatedSpritePlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(setup_animated_sprite)
+        app.add_startup_system(animated_sprite_setup)
             .add_system(animated_sprite_system);
     }
 }
@@ -88,7 +89,7 @@ fn animated_sprite_system(
     }
 }
 
-fn setup_animated_sprite(
+fn animated_sprite_setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
@@ -104,21 +105,11 @@ fn setup_animated_sprite(
     let translation = Vec3::new(-2.0, 2.5, 5.0);
     let radius = translation.length();
 
-    commands.spawn_bundle(PerspectiveCameraBundle {
-        transform: Transform::from_translation(translation)
-            .looking_at(Vec3::ZERO, Vec3::Y),
+    commands.spawn_bundle(SpriteSheetBundle {
+        texture_atlas: texture_atlas_handle,
+        transform: Transform::from_scale(Vec3::splat(2.0)),
         ..Default::default()
-    }).insert(camera3d::PanOrbitCamera {
-        radius,
-        ..Default::default()
-    });
-    commands
-        .spawn_bundle(SpriteSheetBundle {
-            texture_atlas: texture_atlas_handle,
-            transform: Transform::from_scale(Vec3::splat(2.0)),
-            ..Default::default()
-        })
-        .insert(Timer::from_seconds(1.0 / sprite_fps, true));
+    }).insert(Timer::from_seconds(1.0 / sprite_fps, true));
 }
 
 pub struct ModelViewerPlugin;
