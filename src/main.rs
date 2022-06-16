@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::WindowMode;
+use bevy_inspector_egui::WorldInspectorPlugin;
 
 mod camera3d;
 
@@ -15,7 +16,8 @@ fn main() {
         })
         .insert_resource(ClearColor { 0: Color::rgb(0.1, 0.1, 0.1) })
         .add_plugins(DefaultPlugins)
-        //.add_plugin(ModelViewerPlugin)
+        .add_plugin(WorldInspectorPlugin::new())
+        .add_plugin(ModelViewerPlugin)
         .add_plugin(AnimatedTextPlugin)
         .add_plugin(AnimatedSpritePlugin)
         .run();
@@ -70,25 +72,6 @@ impl Plugin for AnimatedSpritePlugin {
     }
 }
 
-fn animated_sprite_system(
-    time: Res<Time>,
-    texture_atlases: Res<Assets<TextureAtlas>>,
-    mut query: Query<(&mut Timer, &mut TextureAtlasSprite, &Handle<TextureAtlas>)>,
-) {
-    for (mut timer, mut sprite, texture_atlas_handle) in query.iter_mut() {
-        // Advance timer.
-        timer.tick(time.delta());
-
-        if timer.finished() {
-            // Get atlas.
-            let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
-
-            // Update sprite frame.
-            sprite.index = (sprite.index as usize + 1) % texture_atlas.textures.len();
-        }
-    }
-}
-
 fn animated_sprite_setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -105,11 +88,32 @@ fn animated_sprite_setup(
     let translation = Vec3::new(-2.0, 2.5, 5.0);
     let radius = translation.length();
 
+    let timer = Timer::from_seconds(1.0 / sprite_fps, true);
+
     commands.spawn_bundle(SpriteSheetBundle {
         texture_atlas: texture_atlas_handle,
         transform: Transform::from_scale(Vec3::splat(2.0)),
         ..Default::default()
-    }).insert(Timer::from_seconds(1.0 / sprite_fps, true));
+    });
+}
+
+fn animated_sprite_system(
+    time: Res<Time>,
+    texture_atlases: Res<Assets<TextureAtlas>>,
+    mut query: Query<(&mut TextureAtlasSprite, &Handle<TextureAtlas>)>,
+) {
+    // for (mut timer, mut sprite, texture_atlas_handle) in query.iter_mut() {
+    //     // Advance timer.
+    //     timer.tick(time.delta());
+    //
+    //     if timer.finished() {
+    //         // Get atlas.
+    //         let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
+    //
+    //         // Update sprite frame.
+    //         sprite.index = (sprite.index as usize + 1) % texture_atlas.textures.len();
+    //     }
+    // }
 }
 
 pub struct ModelViewerPlugin;
