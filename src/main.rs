@@ -4,9 +4,11 @@ use bevy_inspector_egui::WorldInspectorPlugin;
 
 mod camera3d;
 
+use crate::camera3d::spawn_camera;
+
 fn main() {
     App::new()
-        .insert_resource(Msaa { samples: 4 })
+        .insert_resource(Msaa { samples: 1 })
         .insert_resource(WindowDescriptor {
             title: "Bevy Demo".to_string(),
             width: 1280.0,
@@ -132,10 +134,14 @@ impl Plugin for ModelViewerPlugin {
 
 fn model_viewer_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn_scene(asset_server.load("models/FlightHelmet/FlightHelmet.gltf#Scene0"));
-    commands.spawn_bundle(PerspectiveCameraBundle {
-        transform: Transform::from_xyz(0.7, 0.7, 1.0).looking_at(Vec3::new(0.0, 0.3, 0.0), Vec3::Y),
-        ..Default::default()
-    });
+
+    // Add a camera.
+    // commands.spawn_bundle(PerspectiveCameraBundle {
+    //     transform: Transform::from_xyz(0.7, 0.7, 1.0).looking_at(Vec3::new(0.0, 0.3, 0.0), Vec3::Y),
+    //     ..Default::default()
+    // });
+    spawn_camera(&mut commands);
+
     const HALF_SIZE: f32 = 1.0;
     commands.spawn_bundle(DirectionalLightBundle {
         directional_light: DirectionalLight {

@@ -111,7 +111,7 @@ fn get_primary_window_size(windows: &Res<Windows>) -> Vec2 {
 }
 
 /// Spawn a camera like this
-fn spawn_camera(mut commands: Commands) {
+pub fn spawn_camera(commands: &mut Commands) {
     let translation = Vec3::new(-2.0, 2.5, 5.0);
     let radius = translation.length();
 
