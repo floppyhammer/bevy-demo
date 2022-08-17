@@ -36,19 +36,17 @@ impl Plugin for AnimatedTextPlugin {
 
 fn animated_text_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // 2d camera
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    let mut bundle = Camera2dBundle::default();
+    bundle.camera.priority = 1;
+    commands.spawn_bundle(bundle);
 
     commands.spawn_bundle(Text2dBundle {
-        text: Text::with_section(
+        text: Text::from_section(
             "Some Text",
             TextStyle {
                 font: asset_server.load("fonts/VonwaonBitmap-12px.ttf"),
                 font_size: 48.0,
                 color: Color::WHITE,
-            },
-            TextAlignment {
-                vertical: VerticalAlign::Center,
-                horizontal: HorizontalAlign::Center,
             },
         ),
         ..Default::default()
@@ -133,13 +131,12 @@ impl Plugin for ModelViewerPlugin {
 }
 
 fn model_viewer_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn_scene(asset_server.load("models/FlightHelmet/FlightHelmet.gltf#Scene0"));
+    commands.spawn_bundle(SceneBundle {
+        scene: asset_server.load("models/FlightHelmet/FlightHelmet.gltf#Scene0"),
+        ..default()
+    });
 
     // Add a camera.
-    // commands.spawn_bundle(PerspectiveCameraBundle {
-    //     transform: Transform::from_xyz(0.7, 0.7, 1.0).looking_at(Vec3::new(0.0, 0.3, 0.0), Vec3::Y),
-    //     ..Default::default()
-    // });
     spawn_camera(&mut commands);
 
     const HALF_SIZE: f32 = 1.0;
