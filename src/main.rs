@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::render::texture::ImageSettings;
 use bevy::window::WindowMode;
 use bevy_inspector_egui::WorldInspectorPlugin;
 
@@ -9,6 +10,7 @@ use crate::camera3d::spawn_camera;
 fn main() {
     App::new()
         .insert_resource(Msaa { samples: 1 })
+        .insert_resource(ImageSettings::default_nearest())
         .insert_resource(WindowDescriptor {
             title: "Bevy Demo".to_string(),
             width: 1280.0,
@@ -16,7 +18,9 @@ fn main() {
             mode: WindowMode::Windowed,
             ..Default::default()
         })
-        .insert_resource(ClearColor { 0: Color::rgb(0.1, 0.1, 0.1) })
+        .insert_resource(ClearColor {
+            0: Color::rgb(0.1, 0.1, 0.1),
+        })
         .add_plugins(DefaultPlugins)
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(ModelViewerPlugin)
@@ -72,6 +76,9 @@ impl Plugin for AnimatedSpritePlugin {
     }
 }
 
+#[derive(Component, Deref, DerefMut)]
+struct AnimationTimer(Timer);
+
 fn animated_sprite_setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -81,6 +88,7 @@ fn animated_sprite_setup(
 
     // Create atlas from texture.
     let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(50.0, 37.0), 7, 16);
+
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     let sprite_fps = 10.0;
@@ -90,30 +98,36 @@ fn animated_sprite_setup(
 
     let timer = Timer::from_seconds(1.0 / sprite_fps, true);
 
-    commands.spawn_bundle(SpriteSheetBundle {
-        texture_atlas: texture_atlas_handle,
-        transform: Transform::from_scale(Vec3::splat(2.0)),
-        ..Default::default()
-    });
+    commands
+        .spawn_bundle(SpriteSheetBundle {
+            texture_atlas: texture_atlas_handle,
+            transform: Transform::from_scale(Vec3::splat(2.0)),
+            ..Default::default()
+        })
+        .insert(AnimationTimer(timer));
 }
 
 fn animated_sprite_system(
     time: Res<Time>,
     texture_atlases: Res<Assets<TextureAtlas>>,
-    mut query: Query<(&mut TextureAtlasSprite, &Handle<TextureAtlas>)>,
+    mut query: Query<(
+        &mut AnimationTimer,
+        &mut TextureAtlasSprite,
+        &Handle<TextureAtlas>,
+    )>,
 ) {
-    // for (mut timer, mut sprite, texture_atlas_handle) in query.iter_mut() {
-    //     // Advance timer.
-    //     timer.tick(time.delta());
-    //
-    //     if timer.finished() {
-    //         // Get atlas.
-    //         let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
-    //
-    //         // Update sprite frame.
-    //         sprite.index = (sprite.index as usize + 1) % texture_atlas.textures.len();
-    //     }
-    // }
+    for (mut timer, mut sprite, texture_atlas_handle) in query.iter_mut() {
+        // Advance timer.
+        timer.tick(time.delta());
+
+        if timer.finished() {
+            // Get atlas.
+            let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
+
+            // Update sprite frame.
+            sprite.index = (sprite.index as usize + 1) % texture_atlas.textures.len();
+        }
+    }
 }
 
 pub struct ModelViewerPlugin;
@@ -124,9 +138,9 @@ impl Plugin for ModelViewerPlugin {
             color: Color::WHITE,
             brightness: 1.0 / 5.0f32,
         })
-            .add_startup_system(model_viewer_setup)
-            .add_system(animate_light_direction)
-            .add_system(camera3d::pan_orbit_camera);
+        .add_startup_system(model_viewer_setup)
+        .add_system(animate_light_direction)
+        .add_system(camera3d::pan_orbit_camera);
     }
 }
 
