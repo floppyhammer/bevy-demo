@@ -121,7 +121,7 @@ pub fn spawn_camera(commands: &mut Commands) {
     let radius = translation.length();
 
     commands
-        .spawn_bundle(Camera3dBundle {
+        .spawn(Camera3dBundle {
             transform: Transform::from_translation(translation).looking_at(Vec3::ZERO, Vec3::Y),
             ..Default::default()
         })

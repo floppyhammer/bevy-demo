@@ -1,5 +1,6 @@
 use bevy::prelude::*;
-use bevy::render::texture::ImageSettings;
+use bevy::render::camera::RenderTarget::Image;
+use bevy::render::texture::DefaultImageSampler;
 use bevy::window::WindowMode;
 use bevy_inspector_egui::WorldInspectorPlugin;
 
@@ -10,18 +11,21 @@ use crate::camera3d::spawn_camera;
 fn main() {
     App::new()
         .insert_resource(Msaa { samples: 1 })
-        .insert_resource(ImageSettings::default_nearest())
-        .insert_resource(WindowDescriptor {
-            title: "Bevy Demo".to_string(),
-            width: 1280.0,
-            height: 720.0,
-            mode: WindowMode::Windowed,
-            ..Default::default()
-        })
         .insert_resource(ClearColor {
             0: Color::rgb(0.1, 0.1, 0.1),
         })
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            window: WindowDescriptor {
+                monitor: MonitorSelection::Index(1),
+                position: WindowPosition::Centered,
+                title: "Bevy Demo".to_string(),
+                width: 1280.0,
+                height: 720.0,
+                mode: WindowMode::Windowed,
+                ..default()
+            },
+            ..default()
+        }).set(ImagePlugin::default_nearest()))
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(ModelViewerPlugin)
         .add_plugin(AnimatedTextPlugin)
@@ -42,9 +46,9 @@ fn animated_text_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // 2d camera
     let mut bundle = Camera2dBundle::default();
     bundle.camera.priority = 1;
-    commands.spawn_bundle(bundle);
+    commands.spawn(bundle);
 
-    commands.spawn_bundle(Text2dBundle {
+    commands.spawn(Text2dBundle {
         text: Text::from_section(
             "Some Text",
             TextStyle {
@@ -62,8 +66,8 @@ fn animated_text_system(time: Res<Time>, mut query: Query<&mut Transform, With<T
     // `Transform.scale` and `Transform.rotation` do not yet affect text (though you can set the
     // size of the text via `Text.style.font_size`)
     for mut transform in query.iter_mut() {
-        transform.translation.x = 100.0 * time.seconds_since_startup().sin() as f32;
-        transform.translation.y = 100.0 * time.seconds_since_startup().cos() as f32;
+        transform.translation.x = 100.0 * time.elapsed_seconds().sin();
+        transform.translation.y = 100.0 * time.elapsed_seconds().cos();
     }
 }
 
@@ -87,7 +91,7 @@ fn animated_sprite_setup(
     let texture_handle = asset_server.load("textures/adventurer-v1.5-Sheet.png");
 
     // Create atlas from texture.
-    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(50.0, 37.0), 7, 16);
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(50.0, 37.0), 7, 16, None, None);
 
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
@@ -96,10 +100,10 @@ fn animated_sprite_setup(
     let translation = Vec3::new(-2.0, 2.5, 5.0);
     let radius = translation.length();
 
-    let timer = Timer::from_seconds(1.0 / sprite_fps, true);
+    let timer = Timer::from_seconds(1.0 / sprite_fps, TimerMode::Repeating);
 
     commands
-        .spawn_bundle(SpriteSheetBundle {
+        .spawn(SpriteSheetBundle {
             texture_atlas: texture_atlas_handle,
             transform: Transform::from_scale(Vec3::splat(2.0)),
             ..Default::default()
@@ -138,14 +142,14 @@ impl Plugin for ModelViewerPlugin {
             color: Color::WHITE,
             brightness: 1.0 / 5.0f32,
         })
-        .add_startup_system(model_viewer_setup)
-        .add_system(animate_light_direction)
-        .add_system(camera3d::pan_orbit_camera);
+            .add_startup_system(model_viewer_setup)
+            .add_system(animate_light_direction)
+            .add_system(camera3d::pan_orbit_camera);
     }
 }
 
 fn model_viewer_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn_bundle(SceneBundle {
+    commands.spawn(SceneBundle {
         scene: asset_server.load("models/FlightHelmet/FlightHelmet.gltf#Scene0"),
         ..default()
     });
@@ -154,7 +158,7 @@ fn model_viewer_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     spawn_camera(&mut commands);
 
     const HALF_SIZE: f32 = 1.0;
-    commands.spawn_bundle(DirectionalLightBundle {
+    commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             shadow_projection: OrthographicProjection {
                 left: -HALF_SIZE,
@@ -180,7 +184,7 @@ fn animate_light_direction(
         transform.rotation = Quat::from_euler(
             EulerRot::ZYX,
             0.0,
-            time.seconds_since_startup() as f32 * std::f32::consts::TAU / 10.0,
+            time.elapsed_seconds() * std::f32::consts::TAU / 10.0,
             -std::f32::consts::FRAC_PI_4,
         );
     }
