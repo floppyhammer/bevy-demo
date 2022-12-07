@@ -27,7 +27,7 @@ pub(crate) fn pan_orbit_camera(
     mut ev_motion: EventReader<MouseMotion>,
     mut ev_scroll: EventReader<MouseWheel>,
     input_mouse: Res<Input<MouseButton>>,
-    mut query: Query<(&mut PanOrbitCamera, &mut Transform, &PerspectiveProjection)>,
+    mut query: Query<(&mut PanOrbitCamera, &mut Transform, &Projection)>,
 ) {
     // change input mapping for orbit and panning here
     let orbit_button = MouseButton::Right;
@@ -56,6 +56,11 @@ pub(crate) fn pan_orbit_camera(
     }
 
     for (mut pan_orbit, mut transform, projection) in query.iter_mut() {
+        let projection = match projection {
+            Projection::Perspective(pp) => pp,
+            _ => panic!()
+        };
+
         if orbit_button_changed {
             // only check for upside down when orbiting started or ended this frame
             // if the camera is "upside" down, panning horizontally would be inverted, so invert the input to make it correct
