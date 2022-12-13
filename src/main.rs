@@ -39,9 +39,9 @@ fn main() {
                 .set(ImagePlugin::default_nearest()),
         )
         .add_plugin(WorldInspectorPlugin::new())
-        .add_plugin(ModelViewerPlugin)
-        // .add_startup_system(player_setup)
-        // .add_plugin(PlayerControllerPlugin)
-        // .add_plugin(AnimatedSpritePlugin)
+        // .add_plugin(ModelViewerPlugin)
+        .add_startup_system(player_setup)
+        .add_plugin(PlayerControllerPlugin)
+        .add_plugin(AnimatedSpritePlugin)
         .run();
 }

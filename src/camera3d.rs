@@ -58,7 +58,7 @@ pub(crate) fn pan_orbit_camera(
     for (mut pan_orbit, mut transform, projection) in query.iter_mut() {
         let projection = match projection {
             Projection::Perspective(pp) => pp,
-            _ => panic!()
+            _ => panic!(),
         };
 
         if orbit_button_changed {

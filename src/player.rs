@@ -38,5 +38,6 @@ pub fn spawn_player(
             ..Default::default()
         })
         .insert(AnimatedSpriteTimer(timer))
-        .insert(PlayerController);
+        .insert(PlayerController)
+        .insert(Name::new("Player"));
 }

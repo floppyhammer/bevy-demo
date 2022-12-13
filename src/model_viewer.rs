@@ -17,10 +17,12 @@ impl Plugin for ModelViewerPlugin {
 }
 
 fn model_viewer_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(SceneBundle {
-        scene: asset_server.load("models/FlightHelmet/FlightHelmet.gltf#Scene0"),
-        ..default()
-    });
+    commands
+        .spawn(SceneBundle {
+            scene: asset_server.load("models/FlightHelmet/FlightHelmet.gltf#Scene0"),
+            ..default()
+        })
+        .insert(Name::new("Model"));
 
     // Add a camera.
     spawn_camera(&mut commands);
