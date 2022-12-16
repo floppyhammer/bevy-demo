@@ -10,8 +10,10 @@ mod camera3d;
 mod model_viewer;
 mod player;
 mod player_controller;
+mod debug_label;
 
 use crate::camera3d::spawn_camera;
+use crate::debug_label::{DebugLabelPlugin};
 use crate::model_viewer::ModelViewerPlugin;
 use crate::player::player_setup;
 use crate::player_controller::PlayerControllerPlugin;
@@ -41,6 +43,7 @@ fn main() {
         .add_plugin(WorldInspectorPlugin::new())
         // .add_plugin(ModelViewerPlugin)
         .add_startup_system(player_setup)
+        .add_plugin(DebugLabelPlugin)
         .add_plugin(PlayerControllerPlugin)
         .add_plugin(AnimatedSpritePlugin)
         .run();

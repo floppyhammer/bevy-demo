@@ -11,21 +11,6 @@ impl Plugin for PlayerControllerPlugin {
     }
 }
 
-// fn player_controller_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-//     commands.spawn(Text2dBundle {
-//         text: Text::from_section(
-//             "Some Text",
-//             TextStyle {
-//                 font: asset_server.load("fonts/VonwaonBitmap-12px.ttf"),
-//                 font_size: 48.0,
-//                 color: Color::WHITE,
-//             },
-//         ),
-//         transform: Transform::default(),
-//         ..Default::default()
-//     });
-// }
-
 fn player_controller_system(
     time: Res<Time>,
     mut query: Query<&mut Transform, With<PlayerController>>,
