@@ -9,7 +9,7 @@ pub fn player_setup(
 ) {
     // Spawn a 2d camera.
     let mut camera_bundle = Camera2dBundle::default();
-    camera_bundle.camera.priority = 1;
+    camera_bundle.camera.order = 1;
     commands.spawn(camera_bundle);
 
     spawn_player(&mut commands, asset_server, texture_atlases);

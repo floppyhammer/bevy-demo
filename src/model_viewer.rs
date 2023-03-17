@@ -29,19 +29,7 @@ fn model_viewer_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     const HALF_SIZE: f32 = 1.0;
     commands.spawn(DirectionalLightBundle {
-        directional_light: DirectionalLight {
-            shadow_projection: OrthographicProjection {
-                left: -HALF_SIZE,
-                right: HALF_SIZE,
-                bottom: -HALF_SIZE,
-                top: HALF_SIZE,
-                near: -10.0 * HALF_SIZE,
-                far: 10.0 * HALF_SIZE,
-                ..Default::default()
-            },
-            shadows_enabled: true,
-            ..Default::default()
-        },
+        directional_light: DirectionalLight::default(),
         ..Default::default()
     });
 }

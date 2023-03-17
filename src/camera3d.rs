@@ -1,6 +1,6 @@
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
-use bevy::window::WindowMode;
+use bevy::window::{PrimaryWindow, WindowMode};
 
 /// Tags an entity as capable of panning and orbiting.
 #[derive(Component)]
@@ -9,6 +9,7 @@ pub(crate) struct PanOrbitCamera {
     pub focus: Vec3,
     pub radius: f32,
     pub upside_down: bool,
+    pub window_size: (i32, i32),
 }
 
 impl Default for PanOrbitCamera {
@@ -17,13 +18,20 @@ impl Default for PanOrbitCamera {
             focus: Vec3::ZERO,
             radius: 5.0,
             upside_down: false,
+            window_size: (0, 0),
         }
     }
 }
 
+fn get_primary_window_size(primary_query: Query<&Window, With<PrimaryWindow>>) {
+    let Ok(primary) = primary_query.get_single() else {
+        return;
+    };
+    let window_size = (primary.width(), primary.height());
+}
+
 /// Pan the camera with middle mouse click, zoom with scroll wheel, orbit with right mouse click.
 pub(crate) fn pan_orbit_camera(
-    windows: Res<Windows>,
     mut ev_motion: EventReader<MouseMotion>,
     mut ev_scroll: EventReader<MouseWheel>,
     input_mouse: Res<Input<MouseButton>>,
@@ -68,56 +76,51 @@ pub(crate) fn pan_orbit_camera(
             pan_orbit.upside_down = up.y <= 0.0;
         }
 
-        let mut any = false;
-        if rotation_move.length_squared() > 0.0 {
-            any = true;
-            let window = get_primary_window_size(&windows);
-            let delta_x = {
-                let delta = rotation_move.x / window.x * std::f32::consts::PI * 2.0;
-                if pan_orbit.upside_down {
-                    -delta
-                } else {
-                    delta
-                }
-            };
-            let delta_y = rotation_move.y / window.y * std::f32::consts::PI;
-            let yaw = Quat::from_rotation_y(-delta_x);
-            let pitch = Quat::from_rotation_x(-delta_y);
-            transform.rotation = yaw * transform.rotation; // rotate around global y axis
-            transform.rotation = transform.rotation * pitch; // rotate around local x axis
-        } else if pan.length_squared() > 0.0 {
-            any = true;
-            // make panning distance independent of resolution and FOV,
-            let window = get_primary_window_size(&windows);
-            pan *= Vec2::new(projection.fov * projection.aspect_ratio, projection.fov) / window;
-            // translate by local axes
-            let right = transform.rotation * Vec3::X * -pan.x;
-            let up = transform.rotation * Vec3::Y * pan.y;
-            // make panning proportional to distance away from focus point
-            let translation = (right + up) * pan_orbit.radius;
-            pan_orbit.focus += translation;
-        } else if scroll.abs() > 0.0 {
-            any = true;
-            pan_orbit.radius -= scroll * pan_orbit.radius * 0.2;
-            // dont allow zoom to reach zero or you get stuck
-            pan_orbit.radius = f32::max(pan_orbit.radius, 0.05);
-        }
-
-        if any {
-            // emulating parent/child to make the yaw/y-axis rotation behave like a turntable
-            // parent = x and y rotation
-            // child = z-offset
-            let rot_matrix = Mat3::from_quat(transform.rotation);
-            transform.translation =
-                pan_orbit.focus + rot_matrix.mul_vec3(Vec3::new(0.0, 0.0, pan_orbit.radius));
-        }
+        // FIXME: how to get primary window entity.
+        // let mut any = false;
+        // if rotation_move.length_squared() > 0.0 {
+        //     any = true;
+        //     let window = get_primary_window_size(window);
+        //     let delta_x = {
+        //         let delta = rotation_move.x / window.x * std::f32::consts::PI * 2.0;
+        //         if pan_orbit.upside_down {
+        //             -delta
+        //         } else {
+        //             delta
+        //         }
+        //     };
+        //     let delta_y = rotation_move.y / window.y * std::f32::consts::PI;
+        //     let yaw = Quat::from_rotation_y(-delta_x);
+        //     let pitch = Quat::from_rotation_x(-delta_y);
+        //     transform.rotation = yaw * transform.rotation; // rotate around global y axis
+        //     transform.rotation = transform.rotation * pitch; // rotate around local x axis
+        // } else if pan.length_squared() > 0.0 {
+        //     any = true;
+        //     // make panning distance independent of resolution and FOV,
+        //     let window = get_primary_window_size(window);
+        //     pan *= Vec2::new(projection.fov * projection.aspect_ratio, projection.fov) / window;
+        //     // translate by local axes
+        //     let right = transform.rotation * Vec3::X * -pan.x;
+        //     let up = transform.rotation * Vec3::Y * pan.y;
+        //     // make panning proportional to distance away from focus point
+        //     let translation = (right + up) * pan_orbit.radius;
+        //     pan_orbit.focus += translation;
+        // } else if scroll.abs() > 0.0 {
+        //     any = true;
+        //     pan_orbit.radius -= scroll * pan_orbit.radius * 0.2;
+        //     // dont allow zoom to reach zero or you get stuck
+        //     pan_orbit.radius = f32::max(pan_orbit.radius, 0.05);
+        // }
+        //
+        // if any {
+        //     // emulating parent/child to make the yaw/y-axis rotation behave like a turntable
+        //     // parent = x and y rotation
+        //     // child = z-offset
+        //     let rot_matrix = Mat3::from_quat(transform.rotation);
+        //     transform.translation =
+        //         pan_orbit.focus + rot_matrix.mul_vec3(Vec3::new(0.0, 0.0, pan_orbit.radius));
+        // }
     }
-}
-
-fn get_primary_window_size(windows: &Res<Windows>) -> Vec2 {
-    let window = windows.get_primary().unwrap();
-    let window = Vec2::new(window.width() as f32, window.height() as f32);
-    window
 }
 
 pub fn spawn_camera(commands: &mut Commands) {
