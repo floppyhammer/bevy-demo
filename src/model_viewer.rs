@@ -19,7 +19,8 @@ impl Plugin for ModelViewerPlugin {
 fn model_viewer_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(SceneBundle {
-            scene: asset_server.load("models/FlightHelmet/FlightHelmet.gltf#Scene0"),
+            // Note that we have to include the `Scene0` label.
+            scene: asset_server.load("models/MetalRoughSpheres.gltf#Scene0"),
             ..default()
         })
         .insert(Name::new("Model"));
