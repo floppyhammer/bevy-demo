@@ -30,6 +30,6 @@ pub struct AnimatedSpritePlugin;
 
 impl Plugin for AnimatedSpritePlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(animated_sprite_system);
+        app.add_systems(Update, animated_sprite_system);
     }
 }

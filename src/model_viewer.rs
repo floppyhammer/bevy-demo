@@ -10,9 +10,9 @@ impl Plugin for ModelViewerPlugin {
             color: Color::WHITE,
             brightness: 1.0 / 5.0f32,
         })
-        .add_startup_system(model_viewer_setup)
-        .add_system(animate_light_direction)
-        .add_system(camera3d::pan_orbit_camera);
+            .add_systems(Startup, model_viewer_setup)
+            .add_systems(Update, animate_light_direction)
+            .add_systems(Update, camera3d::pan_orbit_camera);
     }
 }
 

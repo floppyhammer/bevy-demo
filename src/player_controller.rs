@@ -7,7 +7,7 @@ pub struct PlayerControllerPlugin;
 
 impl Plugin for PlayerControllerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(player_controller_system);
+        app.add_systems(Update, player_controller_system);
     }
 }
 

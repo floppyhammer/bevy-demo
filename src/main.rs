@@ -20,6 +20,9 @@ use crate::player::player_setup;
 use crate::player_controller::PlayerControllerPlugin;
 
 fn main() {
+    let mut a = Transform::from_translation(Vec3::new(10.0, 0.0, 0.0));
+    a.look_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Z);
+    let mat = a.compute_matrix();
     App::new()
         .insert_resource(Msaa::Off)
         .insert_resource(ClearColor {
@@ -36,11 +39,11 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_plugin(WorldInspectorPlugin::new())
-        .add_plugin(ModelViewerPlugin)
-        // .add_startup_system(player_setup)
-        .add_plugin(DebugLabelPlugin)
-        // .add_plugin(PlayerControllerPlugin)
-        // .add_plugin(AnimatedSpritePlugin)
+        .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(ModelViewerPlugin)
+        // .add_systems(Startup, player_setup)
+        .add_plugins(DebugLabelPlugin)
+        // .add_plugins(PlayerControllerPlugin)
+        // .add_plugins(AnimatedSpritePlugin)
         .run();
 }
