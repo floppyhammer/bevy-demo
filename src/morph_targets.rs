@@ -25,17 +25,17 @@ impl Plugin for MorphTargetsPlugin {
 
 #[derive(Resource)]
 struct MorphData {
-    the_wave: Handle<AnimationClip>,
+    anim: Handle<AnimationClip>,
     mesh: Handle<Mesh>,
 }
 
 fn setup(asset_server: Res<AssetServer>, mut commands: Commands) {
     commands.insert_resource(MorphData {
-        the_wave: asset_server.load("models/MorphStressTest.gltf#Animation2"),
-        mesh: asset_server.load("models/MorphStressTest.gltf#Mesh0/Primitive0"),
+        anim: asset_server.load("models/AvatarSample_A_With_Morph_Anim.glb#Animation0"),
+        mesh: asset_server.load("models/AvatarSample_A_With_Morph_Anim.glb#Mesh1/Primitive1"),
     });
     commands.spawn(SceneBundle {
-        scene: asset_server.load("models/MorphStressTest.gltf#Scene0"),
+        scene: asset_server.load("models/AvatarSample_A_With_Morph_Anim.glb#Scene0"),
         ..default()
     });
     commands.spawn(DirectionalLightBundle {
@@ -63,11 +63,11 @@ fn setup_animations(
         return;
     }
     for (name, mut player) in &mut players {
-        // The name of the entity in the GLTF scene containing the AnimationPlayer for our morph targets is "Main"
-        if name.as_str() != "Main" {
+        // The name of the entity in the GLTF scene containing the AnimationPlayer for our morph targets is "Armature".
+        if name.as_str() != "Armature" {
             continue;
         }
-        player.play(morph_data.the_wave.clone()).repeat();
+        player.play(morph_data.anim.clone()).repeat();
         *has_setup = true;
     }
 }
