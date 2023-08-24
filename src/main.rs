@@ -12,10 +12,12 @@ mod debug_label;
 mod model_viewer;
 mod player;
 mod player_controller;
+mod morph_targets;
 
 use crate::camera3d::spawn_camera;
 use crate::debug_label::DebugLabelPlugin;
 use crate::model_viewer::ModelViewerPlugin;
+use crate::morph_targets::MorphTargetsPlugin;
 use crate::player::player_setup;
 use crate::player_controller::PlayerControllerPlugin;
 
@@ -32,7 +34,7 @@ fn main() {
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        resolution: WindowResolution::new(640.0, 480.0),
+                        resolution: WindowResolution::new(1280.0, 720.0),
                         ..default()
                     }),
                     ..default()
@@ -45,5 +47,6 @@ fn main() {
         .add_plugins(DebugLabelPlugin)
         // .add_plugins(PlayerControllerPlugin)
         // .add_plugins(AnimatedSpritePlugin)
+        .add_plugins(MorphTargetsPlugin)
         .run();
 }

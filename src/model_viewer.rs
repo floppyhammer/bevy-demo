@@ -20,7 +20,7 @@ fn model_viewer_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(SceneBundle {
             // Note that we have to include the `Scene0` label.
-            scene: asset_server.load("models/MetalRoughSpheres.gltf#Scene0"),
+            scene: asset_server.load("models/AvatarSample_A.glb#Scene0"),
             ..default()
         })
         .insert(Name::new("Model"));
