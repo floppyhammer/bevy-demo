@@ -8,7 +8,7 @@ struct DebugLabel {
     timer: Timer,
 }
 
-fn debug_label_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup_debug_label(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(TextBundle {
             text: Text::from_section(
@@ -29,7 +29,7 @@ fn debug_label_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
-fn debug_label_system(time: Res<Time>, mut query: Query<(&mut DebugLabel, &mut Text)>) {
+fn update_debug_label(time: Res<Time>, mut query: Query<(&mut DebugLabel, &mut Text)>) {
     for (mut debug_label, mut text) in query.iter_mut() {
         debug_label.frame_count += 1;
 
@@ -51,7 +51,7 @@ pub struct DebugLabelPlugin;
 
 impl Plugin for DebugLabelPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(debug_label_setup);
-        app.add_system(debug_label_system);
+        app.add_systems(Startup, setup_debug_label);
+        app.add_systems(Update, update_debug_label);
     }
 }

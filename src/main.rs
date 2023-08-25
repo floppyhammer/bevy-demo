@@ -14,10 +14,13 @@ mod player;
 mod player_controller;
 mod morph_targets;
 
+mod morph_viewer_plugin;
+
 use crate::camera3d::spawn_camera;
 use crate::debug_label::DebugLabelPlugin;
 use crate::model_viewer::ModelViewerPlugin;
 use crate::morph_targets::MorphTargetsPlugin;
+use crate::morph_viewer_plugin::MorphViewerPlugin;
 use crate::player::player_setup;
 use crate::player_controller::PlayerControllerPlugin;
 
@@ -44,9 +47,9 @@ fn main() {
         .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(ModelViewerPlugin)
         // .add_systems(Startup, player_setup)
-        .add_plugins(DebugLabelPlugin)
+        // .add_plugins(DebugLabelPlugin)
         // .add_plugins(PlayerControllerPlugin)
         // .add_plugins(AnimatedSpritePlugin)
-        .add_plugins(MorphTargetsPlugin)
+        .add_plugins((MorphTargetsPlugin, MorphViewerPlugin))
         .run();
 }

@@ -10,6 +10,14 @@
 use bevy::prelude::*;
 use std::f32::consts::PI;
 
+use rlip_sync::lip_sync::*;
+use std::time::SystemTime;
+
+use kira::{
+    manager::{backend::DefaultBackend, AudioManager, AudioManagerSettings},
+    sound::static_sound::{StaticSoundData, StaticSoundSettings},
+};
+
 pub struct MorphTargetsPlugin;
 
 impl Plugin for MorphTargetsPlugin {
@@ -19,7 +27,7 @@ impl Plugin for MorphTargetsPlugin {
             ..default()
         })
             .add_systems(Startup, setup)
-            .add_systems(Update, (name_morphs, setup_animations));
+            .add_systems(Update, (name_morphs, setup_animations, update_shape));
     }
 }
 
@@ -27,12 +35,42 @@ impl Plugin for MorphTargetsPlugin {
 struct MorphData {
     anim: Handle<AnimationClip>,
     mesh: Handle<Mesh>,
+    sound_data: StaticSoundData,
+    lip_sync: LipSync,
 }
 
+#[derive(Component)]
+struct MyAudio;
+
+
 fn setup(asset_server: Res<AssetServer>, mut commands: Commands) {
+    // Create an audio manager, which plays sounds and manages resources.
+    let mut manager = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap();
+
+    commands.spawn((AudioBundle {
+        source: asset_server.load("sounds/sound.ogg"),
+        ..default()
+    },
+                    MyAudio));
+
+    let sound_data = match StaticSoundData::from_file("assets/sounds/sound.ogg", StaticSoundSettings::default()) {
+        Ok(data) => {
+            println!("Loaded audio file.");
+            data
+        }
+        Err(error) => {
+            println!("Error loading audio file: {:?}", error);
+            panic!();
+        }
+    };
+
+    let mut lip_sync = LipSync::new();
+
     commands.insert_resource(MorphData {
         anim: asset_server.load("models/AvatarSample_A_With_Morph_Anim.glb#Animation0"),
         mesh: asset_server.load("models/AvatarSample_A_With_Morph_Anim.glb#Mesh1/Primitive1"),
+        sound_data,
+        lip_sync,
     });
     commands.spawn(SceneBundle {
         scene: asset_server.load("models/AvatarSample_A_With_Morph_Anim.glb#Scene0"),
@@ -67,8 +105,19 @@ fn setup_animations(
         if name.as_str() != "Armature" {
             continue;
         }
-        player.play(morph_data.anim.clone()).repeat();
+        // player.play(morph_data.anim.clone()).repeat();
         *has_setup = true;
+    }
+
+    // let res = morph_data.manager.play(morph_data.sound_data.clone());
+    // if res.is_err() {
+    //     println!("Playing sound failed!");
+    // }
+}
+
+fn update_shape(music_controller: Query<&AudioSink, With<MyAudio>>, time: Res<Time>) {
+    if let Ok(sink) = music_controller.get_single() {
+        sink.set_speed(((time.elapsed_seconds() / 5.0).sin() + 1.0).max(0.1));
     }
 }
 
