@@ -73,7 +73,7 @@ const AVAILABLE_KEYS: [MorphKey; 56] = [
 ];
 
 #[derive(Clone, Copy)]
-enum WeightChange {
+pub enum WeightChange {
     Increase,
     Decrease,
 }
@@ -90,7 +90,7 @@ impl WeightChange {
             WeightChange::Decrease => -1.0,
         }
     }
-    fn change_weight(&mut self, weight: f32, change: f32) -> f32 {
+    pub fn change_weight(&mut self, weight: f32, change: f32) -> f32 {
         let mut change = change * self.sign();
         let new_weight = weight + change;
         if new_weight <= 0.0 || new_weight >= 1.0 {
@@ -101,13 +101,13 @@ impl WeightChange {
     }
 }
 
-struct Target {
+pub struct Target {
     entity_name: Option<String>,
-    entity: Entity,
+    pub entity: Entity,
     name: Option<String>,
-    index: usize,
-    weight: f32,
-    change_dir: WeightChange,
+    pub index: usize,
+    pub weight: f32,
+    pub change_dir: WeightChange,
 }
 impl fmt::Display for Target {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -148,8 +148,8 @@ impl Target {
 }
 
 #[derive(Resource)]
-struct WeightsControl {
-    weights: Vec<Target>,
+pub struct WeightsControl {
+    pub weights: Vec<Target>,
 }
 
 struct MorphKey {
