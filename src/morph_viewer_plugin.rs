@@ -11,7 +11,7 @@
 use bevy::prelude::*;
 use std::fmt;
 
-const WEIGHT_PER_SECOND: f32 = 0.8;
+const WEIGHT_PER_SECOND: f32 = 20.0;
 const ALL_MODIFIERS: &[KeyCode] = &[KeyCode::ShiftLeft, KeyCode::ControlLeft, KeyCode::AltLeft];
 const AVAILABLE_KEYS: [MorphKey; 56] = [
     MorphKey::new("r", &[], KeyCode::R),
@@ -77,6 +77,7 @@ pub enum WeightChange {
     Increase,
     Decrease,
 }
+
 impl WeightChange {
     fn reverse(&mut self) {
         *self = match *self {
@@ -109,6 +110,7 @@ pub struct Target {
     pub weight: f32,
     pub change_dir: WeightChange,
 }
+
 impl fmt::Display for Target {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match (self.name.as_ref(), self.entity_name.as_ref()) {
@@ -120,6 +122,7 @@ impl fmt::Display for Target {
         write!(f, ": {}", self.weight)
     }
 }
+
 impl Target {
     fn text_section(&self, key: &str, style: TextStyle) -> TextSection {
         TextSection::new(format!("[{key}] {self}\n"), style)
@@ -157,6 +160,7 @@ struct MorphKey {
     modifiers: &'static [KeyCode],
     key: KeyCode,
 }
+
 impl MorphKey {
     const fn new(name: &'static str, modifiers: &'static [KeyCode], key: KeyCode) -> Self {
         MorphKey {
@@ -175,27 +179,28 @@ impl MorphKey {
         key && modifier && non_modifier
     }
 }
+
 fn update_text(
-    controls: Option<ResMut<WeightsControl>>,
+    controls: Option<Res<WeightsControl>>,
     mut text: Query<&mut Text>,
     morphs: Query<&MorphWeights>,
 ) {
-    let Some(mut controls) = controls else { return; };
-    for (i, target) in controls.weights.iter_mut().enumerate() {
+    let Some(controls) = controls else { return; };
+
+    for (i, target) in controls.weights.iter().enumerate() {
         let Ok(weights) = morphs.get(target.entity) else {
             continue;
         };
         let Some(&actual_weight) = weights.weights().get(target.index) else {
             continue;
         };
-        if actual_weight != target.weight {
-            target.weight = actual_weight;
-        }
+
         let key_name = &AVAILABLE_KEYS[i].name;
         let mut text = text.single_mut();
         text.sections[i + 2].value = format!("[{key_name}] {target}\n");
     }
 }
+
 fn update_morphs(
     controls: Option<ResMut<WeightsControl>>,
     mut morphs: Query<&mut MorphWeights>,
@@ -203,10 +208,11 @@ fn update_morphs(
     time: Res<Time>,
 ) {
     let Some(mut controls) = controls else { return; };
+
     for (i, target) in controls.weights.iter_mut().enumerate() {
-        if !AVAILABLE_KEYS[i].active(&input) {
-            continue;
-        }
+        // if !AVAILABLE_KEYS[i].active(&input) {
+        //     continue;
+        // }
         let Ok(mut weights) = morphs.get_mut(target.entity) else {
             continue;
         };
@@ -216,8 +222,10 @@ fn update_morphs(
         let i = target.index;
         let change = time.delta_seconds() * WEIGHT_PER_SECOND;
         let new_weight = target.change_dir.change_weight(weights_slice[i], change);
+
+        let new_weight = lerp(weights_slice[i], target.weight, change);
+
         weights_slice[i] = new_weight;
-        target.weight = new_weight;
     }
 }
 
@@ -278,4 +286,8 @@ impl Plugin for MorphViewerPlugin {
             ),
         );
     }
+}
+
+fn lerp(start: f32, end: f32, elapsed: f32) -> f32 {
+    start + elapsed * (end - start)
 }
