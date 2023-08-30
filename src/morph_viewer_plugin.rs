@@ -195,9 +195,18 @@ fn update_text(
             continue;
         };
 
+        let shape_key_name = if target.name.is_some() {
+            target.name.clone().unwrap()
+        } else {
+            "unnamed".to_string()
+        };
+
         let key_name = &AVAILABLE_KEYS[i].name;
         let mut text = text.single_mut();
-        text.sections[i + 2].value = format!("[{key_name}] {target}\n");
+        text.sections[i + 2].value = format!(
+            "[{key_name}]({shape_key_name}) {:.2}/{:.2}\n",
+            actual_weight, target.weight
+        );
     }
 }
 
@@ -209,19 +218,26 @@ fn update_morphs(
 ) {
     let Some(mut controls) = controls else { return; };
 
+    let change = time.delta_seconds() * WEIGHT_PER_SECOND;
+
     for (i, target) in controls.weights.iter_mut().enumerate() {
-        // if !AVAILABLE_KEYS[i].active(&input) {
-        //     continue;
+        // Manually activate a morph target.
+        // if AVAILABLE_KEYS[i].active(&input) {
+        //     target.weight = 1.0;
+        // } else {
+        //     target.weight = 0.0;
         // }
+
+        // Get the actual weights.
         let Ok(mut weights) = morphs.get_mut(target.entity) else {
             continue;
         };
+
         // To update individual morph target weights, get the `MorphWeights`
         // component and call `weights_mut` to get access to the weights.
         let weights_slice = weights.weights_mut();
+
         let i = target.index;
-        let change = time.delta_seconds() * WEIGHT_PER_SECOND;
-        let new_weight = target.change_dir.change_weight(weights_slice[i], change);
 
         let new_weight = lerp(weights_slice[i], target.weight, change);
 

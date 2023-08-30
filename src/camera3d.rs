@@ -28,7 +28,8 @@ pub(crate) fn pan_orbit_camera(
     mut ev_motion: EventReader<MouseMotion>,
     mut ev_scroll: EventReader<MouseWheel>,
     input_mouse: Res<Input<MouseButton>>,
-    mut query: Query<(&mut PanOrbitCamera, &mut Transform, &Projection)>, window_query: Query<&Window>,
+    mut query: Query<(&mut PanOrbitCamera, &mut Transform, &Projection)>,
+    window_query: Query<&Window>,
 ) {
     let window = window_query.single();
     let window_size = Vec2::new(window.width(), window.height());
@@ -91,7 +92,8 @@ pub(crate) fn pan_orbit_camera(
         } else if pan.length_squared() > 0.0 {
             any = true;
             // Make panning distance independent of resolution and FOV.
-            pan *= Vec2::new(projection.fov * projection.aspect_ratio, projection.fov) / window_size;
+            pan *=
+                Vec2::new(projection.fov * projection.aspect_ratio, projection.fov) / window_size;
             // translate by local axes
             let right = transform.rotation * Vec3::X * -pan.x;
             let up = transform.rotation * Vec3::Y * pan.y;
@@ -116,17 +118,4 @@ pub(crate) fn pan_orbit_camera(
     }
 }
 
-pub fn spawn_camera(commands: &mut Commands) {
-    let translation = Vec3::new(-2.0, 2.5, 5.0);
-    let radius = translation.length();
-
-    commands
-        .spawn(Camera3dBundle {
-            transform: Transform::from_translation(translation).looking_at(Vec3::ZERO, Vec3::Y),
-            ..Default::default()
-        })
-        .insert(PanOrbitCamera {
-            radius,
-            ..Default::default()
-        });
-}
+pub fn spawn_camera(commands: &mut Commands) {}

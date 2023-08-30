@@ -1,24 +1,15 @@
-//! Controls morph targets in a loaded scene.
-//!
-//! Illustrates:
-//!
-//! - How to access and modify individual morph target weights.
-//!   See the [`update_weights`] system for details.
-//! - How to read morph target names in [`name_morphs`].
-//! - How to play morph target animations in [`setup_animations`].
-
-use std::cmp::{max, min};
 use bevy::prelude::*;
+use std::cmp::{max, min};
 use std::f32::consts::PI;
 
 use rlip_sync::lip_sync::*;
 use std::time::SystemTime;
 
+use crate::morph_viewer_plugin::WeightsControl;
 use kira::{
     manager::{backend::DefaultBackend, AudioManager, AudioManagerSettings},
     sound::static_sound::{StaticSoundData, StaticSoundSettings},
 };
-use crate::morph_viewer_plugin::WeightsControl;
 
 pub struct MorphTargetsPlugin;
 
@@ -34,8 +25,8 @@ impl Plugin for MorphTargetsPlugin {
             brightness: 1.0,
             ..default()
         })
-            .add_systems(Startup, setup)
-            .add_systems(Update, (name_morphs, setup_animations, update_shape));
+        .add_systems(Startup, setup)
+        .add_systems(Update, (name_morphs, setup_animations, update_shape));
     }
 }
 
@@ -57,27 +48,30 @@ struct SpeechAudio {
 #[derive(Component)]
 struct MyAudio;
 
-
 fn setup(asset_server: Res<AssetServer>, mut commands: Commands) {
     // Create an audio manager, which plays sounds and manages resources.
     let mut manager = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap();
 
-    commands.spawn((AudioBundle {
-        source: asset_server.load("sounds/sound.ogg"),
-        ..default()
-    },
-                    MyAudio));
+    commands.spawn((
+        AudioBundle {
+            source: asset_server.load("sounds/sound.ogg"),
+            ..default()
+        },
+        MyAudio,
+    ));
 
-    let sound_data = match StaticSoundData::from_file("assets/sounds/sound.ogg", StaticSoundSettings::default()) {
-        Ok(data) => {
-            println!("Loaded audio file.");
-            data
-        }
-        Err(error) => {
-            println!("Error loading audio file: {:?}", error);
-            panic!();
-        }
-    };
+    let sound_data =
+        match StaticSoundData::from_file("assets/sounds/sound.ogg", StaticSoundSettings::default())
+        {
+            Ok(data) => {
+                println!("Loaded audio file.");
+                data
+            }
+            Err(error) => {
+                println!("Error loading audio file: {:?}", error);
+                panic!();
+            }
+        };
 
     let mut lip_sync = LipSync::new();
 
@@ -90,35 +84,18 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands) {
     });
 
     commands.insert_resource(MorphData {
-        anim: asset_server.load("models/Animal.glb#Animation0"),
-        mesh: asset_server.load("models/Animal.glb#Mesh0/Primitive0"),
-
+        anim: asset_server.load("models/AvatarSample_A_Modified.glb#Animation0"),
+        mesh: asset_server.load("models/AvatarSample_A_Modified.glb#Mesh1/Primitive1"),
     });
 
     commands.spawn(SceneBundle {
-        scene: asset_server.load("models/Animal.glb#Scene0"),
+        scene: asset_server.load("models/AvatarSample_A_Modified.glb#Scene0"),
         ..default()
     });
-    commands.spawn(DirectionalLightBundle {
-        directional_light: DirectionalLight {
-            color: Color::WHITE,
-            illuminance: 19350.0,
-            ..default()
-        },
-        transform: Transform::from_rotation(Quat::from_rotation_z(PI / 2.0)),
-        ..default()
-    });
-    // commands.spawn(Camera3dBundle {
-    //     transform: Transform::from_xyz(3.0, 2.1, 10.2).looking_at(Vec3::ZERO, Vec3::Y),
-    //     ..default()
-    // });
 }
 
 /// Plays an [`AnimationClip`] from the loaded [`Gltf`] on the [`AnimationPlayer`] created by the spawned scene.
-fn setup_animations(
-    mut has_setup: Local<bool>,
-    mut players: Query<(&Name, &mut AnimationPlayer)>,
-) {
+fn setup_animations(mut has_setup: Local<bool>, mut players: Query<(&Name, &mut AnimationPlayer)>) {
     if *has_setup {
         return;
     }
@@ -137,13 +114,21 @@ fn setup_animations(
     // }
 }
 
-fn update_shape(controls: Option<ResMut<WeightsControl>>,
-                morph_data: Res<MorphData>, mut speech_audio: ResMut<SpeechAudio>, mut morphs: Query<&mut MorphWeights>, music_controller: Query<&AudioSink, With<MyAudio>>, time: Res<Time>) {
+fn update_shape(
+    controls: Option<ResMut<WeightsControl>>,
+    morph_data: Res<MorphData>,
+    mut speech_audio: ResMut<SpeechAudio>,
+    mut morphs: Query<&mut MorphWeights>,
+    music_controller: Query<&AudioSink, With<MyAudio>>,
+    time: Res<Time>,
+) {
     // if let Ok(sink) = music_controller.get_single() {
     //     sink.set_speed(((time.elapsed_seconds() / 5.0).sin() + 1.0).max(0.1));
     // }
 
-    if !speech_audio.playing { return; }
+    if !speech_audio.playing {
+        return;
+    }
 
     match speech_audio.start_time.elapsed() {
         Ok(elapsed) => {
@@ -155,12 +140,23 @@ fn update_shape(controls: Option<ResMut<WeightsControl>>,
                 // println!("Time: {:?} {:?} {:?}", current_time, sample_interval_in_ms, speech_audio.last_time_handled);
 
                 let current_time_in_sec = current_time as f32 / 1000.0;
-                let half_sample_range_length_in_sec = LIP_SYNC_SAMPLE_RANGE_LENGTH as f32 / 1000.0 * 0.5;
+                let half_sample_range_length_in_sec =
+                    LIP_SYNC_SAMPLE_RANGE_LENGTH as f32 / 1000.0 * 0.5;
 
                 // The range to sample.
                 let frame_range = (
-                    max(((current_time_in_sec - half_sample_range_length_in_sec) * speech_audio.sound_data.sample_rate as f32) as usize, 0),
-                    min(((current_time_in_sec + half_sample_range_length_in_sec) * speech_audio.sound_data.sample_rate as f32) as usize, speech_audio.sound_data.frames.len()),
+                    max(
+                        ((current_time_in_sec - half_sample_range_length_in_sec)
+                            * speech_audio.sound_data.sample_rate as f32)
+                            as usize,
+                        0,
+                    ),
+                    min(
+                        ((current_time_in_sec + half_sample_range_length_in_sec)
+                            * speech_audio.sound_data.sample_rate as f32)
+                            as usize,
+                        speech_audio.sound_data.frames.len(),
+                    ),
                 );
 
                 let mut stream = Vec::new();
@@ -176,7 +172,11 @@ fn update_shape(controls: Option<ResMut<WeightsControl>>,
 
                     let Some(mut controls) = controls else { return; };
                     for (i, target) in controls.weights.iter_mut().enumerate() {
-                        let new_weight = if estimate.vowel == i as i32 { estimate.amount } else { 0.0 };
+                        let new_weight = if estimate.vowel == i as i32 {
+                            estimate.amount
+                        } else {
+                            0.0
+                        };
 
                         target.weight = new_weight;
                     }
@@ -200,7 +200,9 @@ fn pause(keyboard_input: Res<Input<KeyCode>>) {
 fn name_morphs(
     mut has_printed: Local<bool>,
     morph_data: Res<MorphData>,
-    meshes: Res<Assets<Mesh>>, music_controller: Query<&AudioSink, With<MyAudio>>, mut speech_audio: ResMut<SpeechAudio>,
+    meshes: Res<Assets<Mesh>>,
+    music_controller: Query<&AudioSink, With<MyAudio>>,
+    mut speech_audio: ResMut<SpeechAudio>,
 ) {
     if *has_printed {
         return;

@@ -10,9 +10,9 @@ mod animated_sprite;
 mod camera3d;
 mod debug_label;
 mod model_viewer;
+mod morph_targets;
 mod player;
 mod player_controller;
-mod morph_targets;
 
 mod morph_viewer_plugin;
 

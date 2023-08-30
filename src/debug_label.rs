@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use std::time::Duration;
 use bevy::text::DEFAULT_FONT_HANDLE;
+use std::time::Duration;
 
 #[derive(Component)]
 struct DebugLabel {
@@ -11,14 +11,11 @@ struct DebugLabel {
 fn setup_debug_label(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(TextBundle {
-            text: Text::from_section(
-                "",
-                {
-                    let mut text_style = TextStyle::default();
-                    text_style.font_size = 24.0;
-                    text_style
-                },
-            ),
+            text: Text::from_section("", {
+                let mut text_style = TextStyle::default();
+                text_style.font_size = 24.0;
+                text_style
+            }),
             transform: Transform::default(),
             style: Style::default(),
             ..Default::default()
