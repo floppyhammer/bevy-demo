@@ -12,6 +12,7 @@ use bevy::{
         texture::CompressedImageFormats,
     },
 };
+use bevy::render::mesh::skinning::SkinnedMesh;
 
 pub struct ModelViewerPlugin;
 
@@ -21,11 +22,11 @@ impl Plugin for ModelViewerPlugin {
             color: Color::WHITE,
             brightness: 1.0 / 5.0f32,
         })
-        .add_systems(Startup, setup_model_viewer)
-        .add_systems(Update, (animate_light_direction, skybox_asset_loaded))
-        .add_systems(Update, camera3d::pan_orbit_camera)
-        // Physics engine.
-        .add_plugins(PhysicsPlugins::default());
+            .add_systems(Startup, setup_model_viewer)
+            .add_systems(Update, (animate_light_direction, skybox_asset_loaded, name_skinned_meshes))
+            .add_systems(Update, camera3d::pan_orbit_camera)
+            // Physics engine.
+            .add_plugins(PhysicsPlugins::default());
     }
 }
 
@@ -162,5 +163,39 @@ fn animate_light_direction(
             time.elapsed_seconds() * std::f32::consts::TAU / 100.0,
             -std::f32::consts::FRAC_PI_4,
         );
+    }
+}
+
+fn name_skinned_meshes(query: Query<(&SkinnedMesh, Option<&Name>)>, query2: Query<&Name>, mut setup: Local<bool>) {
+    let no_mesh = query.iter().len() == 0;
+    if no_mesh {
+        return;
+    }
+
+    if !*setup {
+        *setup = true;
+    } else {
+        return;
+    }
+
+    println!("Skinned mesh joints:");
+
+    for (mesh, name) in &query {
+        let mut root_entity: Option<Entity>;
+
+        if let Some(name) = name {
+            if name.as_str() == "Body.baked.0" {
+                for (index, joint) in mesh.joints.iter().enumerate() {
+                    if index == 0 {
+                        root_entity = Some(*joint);
+                    }
+
+                    let name = query2.get(*joint).unwrap();
+                    println!("{}", name.as_str());
+                }
+
+                break;
+            }
+        }
     }
 }
