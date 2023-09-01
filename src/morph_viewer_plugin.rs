@@ -9,6 +9,8 @@
 //! Also illustrates how to read morph target names in [`detect_morphs`].
 
 use bevy::prelude::*;
+use bevy_xpbd_3d::parry::na::clamp;
+use std::cmp::max;
 use std::fmt;
 
 const WEIGHT_PER_SECOND: f32 = 20.0;
@@ -239,7 +241,7 @@ fn update_morphs(
 
         let i = target.index;
 
-        let new_weight = lerp(weights_slice[i], target.weight, change);
+        let new_weight = clamp(lerp(weights_slice[i], target.weight, change), 0.0, 1.0);
 
         weights_slice[i] = new_weight;
     }

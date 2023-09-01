@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use bevy_xpbd_3d::prelude::*;
 
 use crate::camera3d::PanOrbitCamera;
+use bevy::render::mesh::skinning::SkinnedMesh;
 use bevy::{
     asset::LoadState,
     core_pipeline::Skybox,
@@ -12,7 +13,7 @@ use bevy::{
         texture::CompressedImageFormats,
     },
 };
-use bevy::render::mesh::skinning::SkinnedMesh;
+use bevy_xpbd_3d::math::{Scalar, Vector};
 
 pub struct ModelViewerPlugin;
 
@@ -23,10 +24,19 @@ impl Plugin for ModelViewerPlugin {
             brightness: 1.0 / 5.0f32,
         })
             .add_systems(Startup, setup_model_viewer)
-            .add_systems(Update, (animate_light_direction, skybox_asset_loaded, name_skinned_meshes))
+            .add_systems(
+                Update,
+                (
+                    animate_light_direction,
+                    skybox_asset_loaded,
+                    name_skinned_meshes,
+                    update_position_of_root_joints,
+                ),
+            )
             .add_systems(Update, camera3d::pan_orbit_camera)
             // Physics engine.
-            .add_plugins(PhysicsPlugins::default());
+            .add_plugins(PhysicsPlugins::default())
+            .insert_resource(Gravity(Vector::NEG_Y * 9.81));
     }
 }
 
@@ -166,7 +176,20 @@ fn animate_light_direction(
     }
 }
 
-fn name_skinned_meshes(query: Query<(&SkinnedMesh, Option<&Name>)>, query2: Query<&Name>, mut setup: Local<bool>) {
+#[derive(Component)]
+struct Controllable {
+    original_local_transform: Transform,
+}
+
+fn name_skinned_meshes(
+    mut commands: Commands,
+    query: Query<(&SkinnedMesh, Option<&Name>)>,
+    name_query: Query<&Name>,
+    parent_query: Query<&Parent>,
+    children_query: Query<&Children>,
+    transform_query: Query<(&Transform, &GlobalTransform)>,
+    mut setup: Local<bool>,
+) {
     let no_mesh = query.iter().len() == 0;
     if no_mesh {
         return;
@@ -180,22 +203,135 @@ fn name_skinned_meshes(query: Query<(&SkinnedMesh, Option<&Name>)>, query2: Quer
 
     println!("Skinned mesh joints:");
 
+    let mut skinned_meshes = vec![];
+    let mut root_hair_joint = vec![];
+
+    // Find all hair root joints.
     for (mesh, name) in &query {
-        let mut root_entity: Option<Entity>;
-
         if let Some(name) = name {
-            if name.as_str() == "Body.baked.0" {
-                for (index, joint) in mesh.joints.iter().enumerate() {
-                    if index == 0 {
-                        root_entity = Some(*joint);
-                    }
+            println!("Node with skinned mesh: {}", name.as_str());
 
-                    let name = query2.get(*joint).unwrap();
-                    println!("{}", name.as_str());
+            if name.as_str() == "Body.baked.0" {
+                for (joint_index, current_joint) in mesh.joints.iter().enumerate() {
+                    let joint_name = name_query.get(*current_joint).unwrap();
+                    println!("Skinned mesh: {}", joint_name.as_str());
+
+                    skinned_meshes.push(*current_joint);
+
+                    if joint_name.contains("HairJoint") {
+                        let joint_parent = parent_query.get(*current_joint).unwrap();
+
+                        let parent_name = name_query.get(joint_parent.get()).unwrap();
+
+                        if parent_name.as_str() == "J_Bip_C_Head" {
+                            root_hair_joint.push(*current_joint);
+                        }
+                    }
                 }
 
                 break;
             }
         }
+    }
+
+    println!("Skinned meshes: {:?}", skinned_meshes);
+    println!("Root hair joints: {:?}", root_hair_joint);
+
+    for joint in root_hair_joint {
+        let (xform, global_xform) = transform_query.get(joint).unwrap();
+
+        // Spawn kinematic particle that can follow the root joint.
+        commands.entity(joint).insert((
+            RigidBody::Kinematic,
+            Controllable {
+                original_local_transform: *xform,
+            },
+        ));
+
+        println!("{:?}", joint);
+        spawn_joints_recursively(&mut commands, &children_query, &transform_query, joint, 1);
+    }
+}
+
+fn update_position_of_root_joints(
+    mut query: Query<(
+        Entity,
+        &mut Position,
+        &Controllable,
+    )>,
+    parent_query: Query<&Parent>,
+    transform_query: Query<(&Transform, &GlobalTransform)>,
+) {
+    for (entity, mut pos, control) in query.iter_mut() {
+        let parent_entity = parent_query.get(entity).unwrap().get();
+        let (_, parent_global_xform) = transform_query.get(parent_entity).unwrap();
+
+        let new_global_xform = parent_global_xform.mul_transform(control.original_local_transform);
+        let translation = new_global_xform.translation();
+
+        pos.x = translation.x;
+        pos.y = translation.y;
+        pos.z = translation.z;
+    }
+}
+
+fn spawn_joints_recursively(
+    commands: &mut Commands,
+    children_query: &Query<&Children>,
+    transform_query: &Query<(&Transform, &GlobalTransform)>,
+    parent_joint: Entity,
+    depth: usize,
+) {
+    // Reaches the leaf. A leaf is only a position marker for its parent's tail.
+    let res = children_query.get(parent_joint);
+    if res.is_err() {
+        return;
+    }
+
+    let children = res.unwrap();
+    for child in children {
+        for _ in 0..depth {
+            print!("-");
+        }
+        println!("{:?}", child);
+
+        let (xform, global_xform) = transform_query.get(*child).unwrap();
+
+        let (parent_xform, parent_global_xform) = transform_query.get(parent_joint).unwrap();
+
+        let global_position = global_xform.translation();
+
+        let global_bone_length =
+            (parent_global_xform.translation() - global_xform.translation()).length();
+
+        // Should be equal to global_bone_length.
+        let bone_length = xform.translation.length();
+
+        // Spawn dynamic body for the child bone, connecting it to its parent with joints.
+        commands.entity(*child).insert((
+            RigidBody::Dynamic,
+            Position(Vector::new(
+                global_position.x,
+                global_position.y,
+                global_position.z,
+            )),
+            MassPropertiesBundle::new_computed(&Collider::capsule(bone_length, 0.1), 0.1),
+        ));
+
+        commands.spawn(
+            SphericalJoint::new(parent_joint, *child)
+                .with_local_anchor_1(Vector::new(
+                    xform.translation.x,
+                    xform.translation.y,
+                    xform.translation.z,
+                ))
+                .with_local_anchor_2(Vector::ZERO)
+                .with_compliance(0.00001)
+                .with_twist_limits(-0.1, 0.1)
+                .with_swing_limits(-0.1, 0.1)
+                .with_angular_velocity_damping(0.5),
+        );
+
+        spawn_joints_recursively(commands, children_query, transform_query, *child, depth + 1);
     }
 }
