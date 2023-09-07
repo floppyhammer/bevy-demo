@@ -10,8 +10,9 @@ use bevy::{
         texture::CompressedImageFormats,
     },
 };
+use bevy::math::DVec3;
 
-use bevy_xpbd_3d::{math::*, prelude::*};
+use bevy_xpbd_3d::{math::*, prelude::*, SubstepSchedule, SubstepSet};
 
 use crate::camera3d;
 use crate::camera3d::PanOrbitCamera;
@@ -34,10 +35,18 @@ impl Plugin for ModelViewerPlugin {
                     update_position_of_root_joints,
                 ),
             )
-            .add_systems(Update, camera3d::pan_orbit_camera)
+            .add_systems(Update, (camera3d::pan_orbit_camera, blow_wind))
             // Physics engine.
             .add_plugins(PhysicsPlugins::default())
-            .insert_resource(Gravity(Vector::NEG_Y * 9.81));
+            .insert_resource(Gravity(Vector::NEG_Y * 9.8));
+
+        // Get physics substep schedule and add our custom distance constraint
+        let substeps = app
+            .get_schedule_mut(SubstepSchedule)
+            .expect("Add SubstepSchedule first");
+        substeps.add_systems(
+            solve_constraint::<SpringConstraint, 2>.in_set(SubstepSet::SolveUserConstraints),
+        );
     }
 }
 
@@ -73,8 +82,8 @@ fn setup_model_viewer(
             ..default()
         },
         RigidBody::Dynamic,
-        Position(Vec3::Y * 8.0),
-        AngularVelocity(Vec3::new(2.5, 3.4, 1.6)),
+        Position(DVec3::Y * 8.0),
+        AngularVelocity(DVec3::new(2.5, 3.4, 1.6)),
         Collider::cuboid(1.0, 1.0, 1.0),
     ));
 
@@ -182,6 +191,9 @@ struct Controllable {
     original_local_transform: Transform,
 }
 
+#[derive(Component)]
+struct Wind;
+
 fn name_skinned_meshes(
     mut commands: Commands,
     query: Query<(&SkinnedMesh, std::option::Option<&Name>)>,
@@ -256,7 +268,7 @@ fn name_skinned_meshes(
 
     for joint in root_hair_joint {
         let (xform, global_xform) = transform_query.get(joint).unwrap();
-        let global_position = global_xform.translation();
+        let global_position = global_xform.translation().into();
 
         // Spawn a kinematic body in the root joint.
         commands.entity(joint).insert((
@@ -265,7 +277,7 @@ fn name_skinned_meshes(
                 original_local_transform: *xform,
             },
             Collider::ball(0.01),
-            Position(Vector::new(global_position.x, global_position.y, global_position.z)),
+            Position(global_position),
         ));
 
         {
@@ -341,7 +353,9 @@ fn spawn_joints_recursively(
 
         let (parent_xform, parent_global_xform) = transform_query.get(parent_joint).unwrap();
 
-        let global_position = global_xform.translation();
+        let global_position: Vector = global_xform.translation().into();
+
+        let parent_global_position: Vector = parent_global_xform.translation().into();
 
         let global_joint_length =
             (parent_global_xform.translation() - global_xform.translation()).length();
@@ -356,13 +370,9 @@ fn spawn_joints_recursively(
         // Spawn dynamic body for the child bone, connecting it to its parent with joints.
         commands.entity(*child).insert((
             RigidBody::Dynamic,
-            Position(Vector::new(
-                global_position.x,
-                global_position.y,
-                global_position.z,
-            )),
+            Position(global_position),
             Collider::ball(0.01),
-            MassPropertiesBundle::new_computed(&Collider::ball(0.4), 1.0),
+            MassPropertiesBundle::new_computed(&Collider::ball(0.01), 1.0),
         ));
 
         {
@@ -375,18 +385,50 @@ fn spawn_joints_recursively(
             commands.entity(*child).push_children(&[joint_marker]);
         }
 
-        commands.spawn(
-            DistanceJoint::new(*child, parent_joint)
-                .with_local_anchor_1(Vector::new(0.0, -0.01, 0.0))
-                .with_local_anchor_2(Vector::new(0.0, 0.01, 0.0))
-                .with_rest_length(spring_length)
-                .with_limits(0.9 * spring_length, 1.1 * spring_length)
-                .with_linear_velocity_damping(0.1)
-                .with_angular_velocity_damping(1.0)
-                .with_compliance(1.0 / 100.0),
-        );
+        let mut joint = FixedJoint::new(*child, parent_joint)
+            .with_local_anchor_1(Vector::new(0.0, -0.01, 0.0))
+            .with_local_anchor_2(Vector::new(0.0, 0.01, 0.0));
+        joint.compliance = 0.01;
+
+        // let joint2 = DistanceJoint::new(*child, parent_joint)
+        //     .with_local_anchor_1(Vector::new(0.0, -0.01, 0.0))
+        //     .with_local_anchor_2(Vector::new(0.0, 0.01, 0.0))
+        //     .with_rest_length(spring_length.into())
+        //     .with_limits(0.9 * spring_length, 1.1 * spring_length)
+        //     .with_linear_velocity_damping(0.1)
+        //     .with_angular_velocity_damping(1.0)
+        //     .with_compliance(1.0 / 100.0);
+
+        let joint3 = SpringConstraint {
+            entity1: parent_joint,
+            entity2: *child,
+            relative_rest_position: parent_global_position - global_position,
+            lagrange: 0.0,
+            compliance: 1.0 / 100.0,
+        };
+
+        commands.spawn(joint3);
+
+        // Apply wind force.
+        let mut force = ExternalForce::default();
+        force.apply_force(Vector::X);
+        commands.entity(*child).insert((
+            RigidBody::Dynamic,
+            Wind,
+            force,
+        ));
 
         spawn_joints_recursively(commands, children_query, transform_query, *child, depth + 1, materials, meshes);
+    }
+}
+
+fn blow_wind(time: Res<Time>, mut query: Query<(&mut ExternalForce, With<Wind>)>) {
+    let f = Vector::X * 0.02 * (time.elapsed_seconds().sin() as f64 + 1.0);
+    // println!("F: {}", f);
+
+    for (mut force, _) in query.iter_mut() {
+        force.clear();
+        force.apply_force(f);
     }
 }
 
@@ -394,8 +436,8 @@ fn spawn_joints_recursively(
 struct SpringConstraint {
     entity1: Entity,
     entity2: Entity,
-    rest_position1: Vector,
-    rest_position2: Vector,
+    // Relative position from entity2 to entity1.
+    relative_rest_position: Vector,
     lagrange: Scalar,
     compliance: Scalar,
 }
@@ -406,48 +448,48 @@ impl XpbdConstraint<2> for SpringConstraint {
     fn entities(&self) -> [Entity; 2] {
         [self.entity1, self.entity2]
     }
+
     fn clear_lagrange_multipliers(&mut self) {
         self.lagrange = 0.0;
     }
+
     fn solve(&mut self, bodies: [&mut RigidBodyQueryItem; 2], dt: Scalar) {
-        // let [body1, body2] = bodies;
-        //
-        // // Local attachment points at the centers of the bodies for simplicity
-        // let [r1, r2] = [Vector::ZERO, Vector::ZERO];
-        //
-        // // Compute the positional difference
-        // let delta_x = body1.current_position() - body2.current_position();
-        //
-        // // The current separation distance
-        // let length = delta_x.length();
-        //
-        // // The value of the constraint function. When this is zero, the constraint is satisfied,
-        // // and the distance between the bodies is the rest length.
-        // let c = length - self.rest_length;
-        //
-        // // Avoid division by zero and unnecessary computation
-        // if length <= 0.0 || c == 0.0 {
-        //     return;
-        // }
-        //
-        // // Normalized delta_x
-        // let n = delta_x / length;
-        //
-        // // Compute generalized inverse masses (method from PositionConstraint)
-        // let w1 = self.compute_generalized_inverse_mass(body1, r1, n);
-        // let w2 = self.compute_generalized_inverse_mass(body2, r2, n);
-        // let w = [w1, w2];
-        //
-        // // Constraint gradients, i.e. how the bodies should be moved
-        // // relative to each other in order to satisfy the constraint
-        // let gradients = [n, -n];
-        //
-        // // Compute Lagrange multiplier update, essentially the signed magnitude of the correction
-        // let delta_lagrange =
-        //     self.compute_lagrange_update(self.lagrange, c, &gradients, &w, self.compliance, dt);
-        // self.lagrange += delta_lagrange;
-        //
-        // // Apply positional correction (method from PositionConstraint)
-        // self.apply_positional_correction(body1, body2, delta_lagrange, n, r1, r2);
+        let [body1, body2] = bodies;
+
+        // Local attachment points at the centers of the bodies for simplicity.
+        let [r1, r2] = [Vector::ZERO, Vector::ZERO];
+
+        // Compute the positional difference.
+        let delta_pos = body1.current_position() - body2.current_position();
+
+        // The current separation distance.
+        let length = delta_pos.length();
+
+        // The value of the constraint function. When this is zero, the constraint is satisfied.
+        let c = delta_pos - self.relative_rest_position;
+
+        // Avoid division by zero and unnecessary computation.
+        if length <= 0.0 || c.length() == 0.0 {
+            return;
+        }
+
+        let n = c.normalize();
+
+        // Compute generalized inverse masses (method from PositionConstraint).
+        let w1 = self.compute_generalized_inverse_mass(body1, r1, n);
+        let w2 = self.compute_generalized_inverse_mass(body2, r2, n);
+        let w = [w1, w2];
+
+        // Constraint gradients, i.e. how the bodies should be moved
+        // relative to each other in order to satisfy the constraint.
+        let gradients = [n, -n];
+
+        // Compute Lagrange multiplier update, essentially the signed magnitude of the correction.
+        let delta_lagrange =
+            self.compute_lagrange_update(self.lagrange, c.length(), &gradients, &w, self.compliance, dt);
+        self.lagrange += delta_lagrange;
+
+        // Apply positional correction (method from PositionConstraint)
+        self.apply_positional_correction(body1, body2, delta_lagrange, n, r1, r2);
     }
 }
