@@ -104,6 +104,9 @@ impl WeightChange {
     }
 }
 
+#[derive(Component)]
+struct MorphTargetLabel {}
+
 pub struct Target {
     entity_name: Option<String>,
     pub entity: Entity,
@@ -184,7 +187,7 @@ impl MorphKey {
 
 fn update_text(
     controls: Option<Res<WeightsControl>>,
-    mut text: Query<&mut Text>,
+    mut text: Query<&mut Text, With<MorphTargetLabel>>,
     morphs: Query<&MorphWeights>,
 ) {
     let Some(controls) = controls else { return; };
@@ -283,12 +286,15 @@ fn detect_morphs(
         |(i, target): (usize, &Target)| target.text_section(AVAILABLE_KEYS[i].name, style.clone());
     sections.extend(detected.iter().enumerate().map(target_to_text));
     commands.insert_resource(WeightsControl { weights: detected });
-    commands.spawn(TextBundle::from_sections(sections).with_style(Style {
-        position_type: PositionType::Absolute,
-        top: Val::Px(10.0),
-        left: Val::Px(10.0),
-        ..default()
-    }));
+    commands.spawn((
+        TextBundle::from_sections(sections).with_style(Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(10.0),
+            left: Val::Px(10.0),
+            ..default()
+        }),
+        MorphTargetLabel {},
+    ));
 }
 
 pub struct MorphViewerPlugin;

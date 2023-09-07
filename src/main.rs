@@ -49,7 +49,7 @@ fn main() {
         .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(ModelViewerPlugin)
         // .add_systems(Startup, player_setup)
-        // .add_plugins(DebugLabelPlugin)
+        .add_plugins(DebugLabelPlugin)
         // .add_plugins(PlayerControllerPlugin)
         // .add_plugins(AnimatedSpritePlugin)
         .add_plugins((MorphTargetsPlugin, MorphViewerPlugin))

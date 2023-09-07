@@ -14,6 +14,7 @@ fn setup_debug_label(mut commands: Commands, asset_server: Res<AssetServer>) {
             text: Text::from_section("", {
                 let mut text_style = TextStyle::default();
                 text_style.font_size = 24.0;
+                text_style.color = Color::RED;
                 text_style
             }),
             transform: Transform::default(),

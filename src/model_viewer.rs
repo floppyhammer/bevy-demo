@@ -1,8 +1,5 @@
-use crate::camera3d;
 use bevy::prelude::*;
-use bevy_xpbd_3d::prelude::*;
 
-use crate::camera3d::PanOrbitCamera;
 use bevy::render::mesh::skinning::SkinnedMesh;
 use bevy::{
     asset::LoadState,
@@ -13,7 +10,11 @@ use bevy::{
         texture::CompressedImageFormats,
     },
 };
-use bevy_xpbd_3d::math::{Scalar, Vector};
+
+use bevy_xpbd_3d::{math::*, prelude::*};
+
+use crate::camera3d;
+use crate::camera3d::PanOrbitCamera;
 
 pub struct ModelViewerPlugin;
 
@@ -100,7 +101,7 @@ fn setup_model_viewer(
 
     // Add a camera.
     {
-        let translation = Vec3::new(-2.0, 2.5, 5.0);
+        let translation = Vec3::new(-2.0, 4.0, -5.0);
         let radius = translation.length();
 
         commands
@@ -183,11 +184,13 @@ struct Controllable {
 
 fn name_skinned_meshes(
     mut commands: Commands,
-    query: Query<(&SkinnedMesh, Option<&Name>)>,
+    query: Query<(&SkinnedMesh, std::option::Option<&Name>)>,
     name_query: Query<&Name>,
     parent_query: Query<&Parent>,
     children_query: Query<&Children>,
     transform_query: Query<(&Transform, &GlobalTransform)>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
     mut setup: Local<bool>,
 ) {
     let no_mesh = query.iter().len() == 0;
@@ -237,28 +240,51 @@ fn name_skinned_meshes(
     println!("Skinned meshes: {:?}", skinned_meshes);
     println!("Root hair joints: {:?}", root_hair_joint);
 
+    let marker_radius = 0.01;
+
+    let marker_mesh = PbrBundle {
+        mesh: meshes.add(
+            Mesh::try_from(shape::Icosphere {
+                radius: marker_radius as f32,
+                ..default()
+            })
+                .unwrap(),
+        ),
+        material: materials.add(StandardMaterial::from(Color::RED)),
+        ..default()
+    };
+
     for joint in root_hair_joint {
         let (xform, global_xform) = transform_query.get(joint).unwrap();
+        let global_position = global_xform.translation();
 
-        // Spawn kinematic particle that can follow the root joint.
+        // Spawn a kinematic body in the root joint.
         commands.entity(joint).insert((
             RigidBody::Kinematic,
             Controllable {
                 original_local_transform: *xform,
             },
+            Collider::ball(0.01),
+            Position(Vector::new(global_position.x, global_position.y, global_position.z)),
         ));
 
+        {
+            let joint_marker = commands
+                .spawn((
+                    marker_mesh.clone(),
+                ))
+                .id();
+
+            commands.entity(joint).push_children(&[joint_marker]);
+        }
+
         println!("{:?}", joint);
-        spawn_joints_recursively(&mut commands, &children_query, &transform_query, joint, 1);
+        spawn_joints_recursively(&mut commands, &children_query, &transform_query, joint, 1, &mut materials, &mut meshes);
     }
 }
 
 fn update_position_of_root_joints(
-    mut query: Query<(
-        Entity,
-        &mut Position,
-        &Controllable,
-    )>,
+    mut query: Query<(Entity, &mut Position, &Controllable)>,
     parent_query: Query<&Parent>,
     transform_query: Query<(&Transform, &GlobalTransform)>,
 ) {
@@ -269,9 +295,9 @@ fn update_position_of_root_joints(
         let new_global_xform = parent_global_xform.mul_transform(control.original_local_transform);
         let translation = new_global_xform.translation();
 
-        pos.x = translation.x;
-        pos.y = translation.y;
-        pos.z = translation.z;
+        // pos.x = translation.x;
+        // pos.y = translation.y;
+        // pos.z = translation.z;
     }
 }
 
@@ -281,12 +307,28 @@ fn spawn_joints_recursively(
     transform_query: &Query<(&Transform, &GlobalTransform)>,
     parent_joint: Entity,
     depth: usize,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    meshes: &mut ResMut<Assets<Mesh>>,
 ) {
     // Reaches the leaf. A leaf is only a position marker for its parent's tail.
     let res = children_query.get(parent_joint);
     if res.is_err() {
         return;
     }
+
+    let marker_radius = 0.01;
+
+    let marker_mesh = PbrBundle {
+        mesh: meshes.add(
+            Mesh::try_from(shape::Icosphere {
+                radius: marker_radius as f32,
+                ..default()
+            })
+                .unwrap(),
+        ),
+        material: materials.add(StandardMaterial::from(Color::rgb(0.2, 0.7, 0.9))),
+        ..default()
+    };
 
     let children = res.unwrap();
     for child in children {
@@ -301,11 +343,15 @@ fn spawn_joints_recursively(
 
         let global_position = global_xform.translation();
 
-        let global_bone_length =
+        let global_joint_length =
             (parent_global_xform.translation() - global_xform.translation()).length();
 
-        // Should be equal to global_bone_length.
-        let bone_length = xform.translation.length();
+        // Should be equal to global_joint_length.
+        let joint_distance = xform.translation.length();
+
+        assert!((global_joint_length - joint_distance) < 0.0001);
+
+        let spring_length = (joint_distance - 0.02) * 0.2;
 
         // Spawn dynamic body for the child bone, connecting it to its parent with joints.
         commands.entity(*child).insert((
@@ -315,23 +361,93 @@ fn spawn_joints_recursively(
                 global_position.y,
                 global_position.z,
             )),
-            MassPropertiesBundle::new_computed(&Collider::capsule(bone_length, 0.1), 0.1),
+            Collider::ball(0.01),
+            MassPropertiesBundle::new_computed(&Collider::ball(0.4), 1.0),
         ));
 
-        commands.spawn(
-            SphericalJoint::new(parent_joint, *child)
-                .with_local_anchor_1(Vector::new(
-                    xform.translation.x,
-                    xform.translation.y,
-                    xform.translation.z,
+        {
+            let joint_marker = commands
+                .spawn((
+                    marker_mesh.clone(),
                 ))
-                .with_local_anchor_2(Vector::ZERO)
-                .with_compliance(0.00001)
-                .with_twist_limits(-0.1, 0.1)
-                .with_swing_limits(-0.1, 0.1)
-                .with_angular_velocity_damping(0.5),
+                .id();
+
+            commands.entity(*child).push_children(&[joint_marker]);
+        }
+
+        commands.spawn(
+            DistanceJoint::new(*child, parent_joint)
+                .with_local_anchor_1(Vector::new(0.0, -0.01, 0.0))
+                .with_local_anchor_2(Vector::new(0.0, 0.01, 0.0))
+                .with_rest_length(spring_length)
+                .with_limits(0.9 * spring_length, 1.1 * spring_length)
+                .with_linear_velocity_damping(0.1)
+                .with_angular_velocity_damping(1.0)
+                .with_compliance(1.0 / 100.0),
         );
 
-        spawn_joints_recursively(commands, children_query, transform_query, *child, depth + 1);
+        spawn_joints_recursively(commands, children_query, transform_query, *child, depth + 1, materials, meshes);
+    }
+}
+
+#[derive(Component)]
+struct SpringConstraint {
+    entity1: Entity,
+    entity2: Entity,
+    rest_position1: Vector,
+    rest_position2: Vector,
+    lagrange: Scalar,
+    compliance: Scalar,
+}
+
+impl PositionConstraint for SpringConstraint {}
+
+impl XpbdConstraint<2> for SpringConstraint {
+    fn entities(&self) -> [Entity; 2] {
+        [self.entity1, self.entity2]
+    }
+    fn clear_lagrange_multipliers(&mut self) {
+        self.lagrange = 0.0;
+    }
+    fn solve(&mut self, bodies: [&mut RigidBodyQueryItem; 2], dt: Scalar) {
+        // let [body1, body2] = bodies;
+        //
+        // // Local attachment points at the centers of the bodies for simplicity
+        // let [r1, r2] = [Vector::ZERO, Vector::ZERO];
+        //
+        // // Compute the positional difference
+        // let delta_x = body1.current_position() - body2.current_position();
+        //
+        // // The current separation distance
+        // let length = delta_x.length();
+        //
+        // // The value of the constraint function. When this is zero, the constraint is satisfied,
+        // // and the distance between the bodies is the rest length.
+        // let c = length - self.rest_length;
+        //
+        // // Avoid division by zero and unnecessary computation
+        // if length <= 0.0 || c == 0.0 {
+        //     return;
+        // }
+        //
+        // // Normalized delta_x
+        // let n = delta_x / length;
+        //
+        // // Compute generalized inverse masses (method from PositionConstraint)
+        // let w1 = self.compute_generalized_inverse_mass(body1, r1, n);
+        // let w2 = self.compute_generalized_inverse_mass(body2, r2, n);
+        // let w = [w1, w2];
+        //
+        // // Constraint gradients, i.e. how the bodies should be moved
+        // // relative to each other in order to satisfy the constraint
+        // let gradients = [n, -n];
+        //
+        // // Compute Lagrange multiplier update, essentially the signed magnitude of the correction
+        // let delta_lagrange =
+        //     self.compute_lagrange_update(self.lagrange, c, &gradients, &w, self.compliance, dt);
+        // self.lagrange += delta_lagrange;
+        //
+        // // Apply positional correction (method from PositionConstraint)
+        // self.apply_positional_correction(body1, body2, delta_lagrange, n, r1, r2);
     }
 }
