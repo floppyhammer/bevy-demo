@@ -190,7 +190,9 @@ fn update_text(
     mut text: Query<&mut Text, With<MorphTargetLabel>>,
     morphs: Query<&MorphWeights>,
 ) {
-    let Some(controls) = controls else { return; };
+    let Some(controls) = controls else {
+        return;
+    };
 
     for (i, target) in controls.weights.iter().enumerate() {
         let Ok(weights) = morphs.get(target.entity) else {
@@ -221,7 +223,9 @@ fn update_morphs(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
 ) {
-    let Some(mut controls) = controls else { return; };
+    let Some(mut controls) = controls else {
+        return;
+    };
 
     let change = time.delta_seconds() * WEIGHT_PER_SECOND;
 

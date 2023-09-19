@@ -12,3 +12,6 @@ rlip_sync = { git = "https://github.com/floppyhammer/rlip-sync.git" }
 kira = "0.8.4"
 bevy_xpbd_3d = { git = "https://github.com/Jondolf/bevy_xpbd.git", default-features = false, features = ["3d", "f64"] }
 bevy_editor_pls = { git = "https://github.com/jakobhellermann/bevy_editor_pls.git", branch = "main" }
+serde_json = "1.0.104"
+gltf = { git = "https://github.com/expenses/gltf.git", branch = "third-party-extensions", default-features = false, features = ["names"]  }
+serde = { version = "1.0.188", features = ["derive"] }

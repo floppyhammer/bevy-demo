@@ -17,11 +17,13 @@ mod player;
 mod player_controller;
 
 mod morph_viewer_plugin;
+mod vrm_gltf;
+pub use gltf::json as gltf_json;
 
 use crate::camera3d::spawn_camera;
 use crate::debug_label::DebugLabelPlugin;
 use crate::model_viewer::ModelViewerPlugin;
-use crate::morph_targets::MorphTargetsPlugin;
+use crate::morph_targets::VrmPlugin;
 use crate::morph_viewer_plugin::MorphViewerPlugin;
 use crate::player::player_setup;
 use crate::player_controller::PlayerControllerPlugin;
@@ -52,7 +54,7 @@ fn main() {
         .add_plugins(DebugLabelPlugin)
         // .add_plugins(PlayerControllerPlugin)
         // .add_plugins(AnimatedSpritePlugin)
-        .add_plugins((MorphTargetsPlugin, MorphViewerPlugin))
+        .add_plugins((VrmPlugin, MorphViewerPlugin))
         // .add_plugins(EditorPlugin::default())
         .run();
 }
