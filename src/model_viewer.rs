@@ -49,8 +49,8 @@ fn setup_model_viewer(
             material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
             ..default()
         },
-        RigidBody::Static,
-        Collider::cuboid(8.0, 0.002, 8.0),
+        // RigidBody::Static,
+        // Collider::cuboid(8.0, 0.002, 8.0),
     ));
 
     // Cube
@@ -60,10 +60,10 @@ fn setup_model_viewer(
             material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
             ..default()
         },
-        RigidBody::Dynamic,
-        Position(DVec3::Y * 8.0),
-        AngularVelocity(DVec3::new(2.5, 3.4, 1.6)),
-        Collider::cuboid(1.0, 1.0, 1.0),
+        // RigidBody::Dynamic,
+        // Position(DVec3::Y * 8.0),
+        // AngularVelocity(DVec3::new(2.5, 3.4, 1.6)),
+        // Collider::cuboid(1.0, 1.0, 1.0),
     ));
 
     // Add skybox.
@@ -78,14 +78,14 @@ fn setup_model_viewer(
     // });
 
     // Add a gltf scene.
-    commands
-        .spawn(SceneBundle {
-            // Note that we have to include the `Scene0` label.
-            scene: asset_server.load("models/LivingRoom.glb#Scene0"),
-            transform: Transform::from_scale(Vec3::new(0.01, 0.01, 0.01)),
-            ..default()
-        })
-        .insert(Name::new("Model"));
+    // commands
+    //     .spawn(SceneBundle {
+    //         // Note that we have to include the `Scene0` label.
+    //         scene: asset_server.load("models/LivingRoom.glb#Scene0"),
+    //         transform: Transform::from_scale(Vec3::new(0.01, 0.01, 0.01)),
+    //         ..default()
+    //     })
+    //     .insert(Name::new("Model"));
 
     // Add a camera.
     {

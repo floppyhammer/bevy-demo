@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::text::DEFAULT_FONT_HANDLE;
 use std::time::Duration;
 
 #[derive(Component)]
