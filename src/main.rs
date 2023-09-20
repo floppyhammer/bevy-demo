@@ -3,9 +3,7 @@ use bevy::prelude::*;
 use bevy::render::camera::RenderTarget::Image;
 use bevy::render::texture::DefaultImageSampler;
 use bevy::window::{ExitCondition, WindowMode, WindowResolution};
-use bevy_editor_pls::editor_window::{EditorWindow, EditorWindowContext};
-use bevy_editor_pls::{egui, prelude::*};
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
+// use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use std::slice::Windows;
 
 mod animated_sprite;

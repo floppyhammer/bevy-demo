@@ -35,22 +35,22 @@ impl Plugin for VrmPlugin {
                 (
                     setup_morphs,
                     setup_animations,
-                    // setup_spring_bones,
+                    setup_spring_bones,
                     update_shape,
-                    // blow_wind,
+                    blow_wind,
                 ),
-            );
+            )
             // Physics engine.
-            // .add_plugins(PhysicsPlugins::default())
-            // .insert_resource(Gravity(Vector::NEG_Y * 9.8));
+            .add_plugins(PhysicsPlugins::default())
+            .insert_resource(Gravity(Vector::NEG_Y * 9.8));
 
         // Get physics substep schedule and add our custom distance constraint
-        // let substeps = app
-        //     .get_schedule_mut(SubstepSchedule)
-        //     .expect("Add SubstepSchedule first");
-        // substeps.add_systems(
-        //     solve_constraint::<SpringConstraint, 2>.in_set(SubstepSet::SolveUserConstraints),
-        // );
+        let substeps = app
+            .get_schedule_mut(SubstepSchedule)
+            .expect("Add SubstepSchedule first");
+        substeps.add_systems(
+            solve_constraint::<SpringConstraint, 2>.in_set(SubstepSet::SolveUserConstraints),
+        );
     }
 }
 
@@ -303,320 +303,320 @@ struct Controllable {
     original_local_transform: Transform,
 }
 
-// fn setup_spring_bones(
-//     mut commands: Commands,
-//     skinned_mesh_query: Query<(Entity, &SkinnedMesh)>,
-//     name_query: Query<&Name>,
-//     parent_query: Query<&Parent>,
-//     children_query: Query<&Children>,
-//     transform_query: Query<(&Transform, &GlobalTransform)>,
-//     gltf_query: Query<&GltfExtras>,
-//     vrm_query: Query<&VrmData>,
-//     mut materials: ResMut<Assets<StandardMaterial>>,
-//     mut meshes: ResMut<Assets<Mesh>>,
-//     mut setup: Local<bool>,
-// ) {
-//     let no_skinned_mesh = skinned_mesh_query.iter().len() == 0;
-//     if no_skinned_mesh {
-//         return;
-//     }
-//
-//     if !*setup {
-//         *setup = true;
-//     } else {
-//         return;
-//     }
-//
-//     // for e in gltf_query.iter() {
-//     //     let json_string = serde_json::to_string_pretty(&e.value).unwrap();
-//     //     println!("{:?}", json_string);
-//     // }
-//
-//     println!("Skinned mesh joints with spring bone:");
-//
-//     let mut root_spring_bone_joints: Vec<Entity> = vec![];
-//
-//     let mut found_scene_entity = false;
-//
-//     for (entity, mesh) in &skinned_mesh_query {
-//         if found_scene_entity {
-//             break;
-//         }
-//
-//         for joint in &mesh.joints {
-//             let joint_name = name_query.get(*joint).unwrap();
-//
-//             // println!("{}", joint_name.as_str());
-//
-//             for vrm in &vrm_query {
-//                 if vrm
-//                     .spring_bone_roots
-//                     .contains(&joint_name.as_str().to_string())
-//                 {
-//                     println!("{}", joint_name.as_str());
-//                     root_spring_bone_joints.push(*joint);
-//                     found_scene_entity = true;
-//                 }
-//             }
-//         }
-//     }
-//
-//     println!("Root spring bone joints: {:?}", root_spring_bone_joints);
-//
-//     let marker_radius = 0.01;
-//
-//     let marker_mesh = PbrBundle {
-//         mesh: meshes.add(
-//             Mesh::try_from(shape::Icosphere {
-//                 radius: marker_radius as f32,
-//                 ..default()
-//             })
-//                 .unwrap(),
-//         ),
-//         material: materials.add(StandardMaterial::from(Color::RED)),
-//         ..default()
-//     };
-//
-//     for joint in root_spring_bone_joints {
-//         let (xform, global_xform) = transform_query.get(joint).unwrap();
-//         let global_position = global_xform.translation().into();
-//
-//         // Spawn a kinematic body in the root joint.
-//         commands.entity(joint).insert((
-//             RigidBody::Kinematic,
-//             Controllable {
-//                 original_local_transform: *xform,
-//             },
-//             Collider::ball(0.01),
-//             Position(global_position),
-//         ));
-//
-//         {
-//             let joint_marker = commands.spawn((marker_mesh.clone(), )).id();
-//
-//             commands.entity(joint).push_children(&[joint_marker]);
-//         }
-//
-//         spawn_joints_recursively(
-//             &mut commands,
-//             &children_query,
-//             &transform_query,
-//             joint,
-//             1,
-//             &mut materials,
-//             &mut meshes,
-//         );
-//     }
-//
-//     println!("Spring bone setup finished");
-// }
+fn setup_spring_bones(
+    mut commands: Commands,
+    skinned_mesh_query: Query<(Entity, &SkinnedMesh)>,
+    name_query: Query<&Name>,
+    parent_query: Query<&Parent>,
+    children_query: Query<&Children>,
+    transform_query: Query<(&Transform, &GlobalTransform)>,
+    gltf_query: Query<&GltfExtras>,
+    vrm_query: Query<&VrmData>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut setup: Local<bool>,
+) {
+    let no_skinned_mesh = skinned_mesh_query.iter().len() == 0;
+    if no_skinned_mesh {
+        return;
+    }
 
-// fn update_position_of_root_joints(
-//     mut query: Query<(Entity, &mut Position, &Controllable)>,
-//     parent_query: Query<&Parent>,
-//     transform_query: Query<(&Transform, &GlobalTransform)>,
-// ) {
-//     for (entity, mut pos, control) in query.iter_mut() {
-//         let parent_entity = parent_query.get(entity).unwrap().get();
-//         let (_, parent_global_xform) = transform_query.get(parent_entity).unwrap();
-//
-//         let new_global_xform = parent_global_xform.mul_transform(control.original_local_transform);
-//         let translation = new_global_xform.translation();
-//
-//         // pos.x = translation.x;
-//         // pos.y = translation.y;
-//         // pos.z = translation.z;
-//     }
-// }
-//
-// fn spawn_joints_recursively(
-//     commands: &mut Commands,
-//     children_query: &Query<&Children>,
-//     transform_query: &Query<(&Transform, &GlobalTransform)>,
-//     parent_joint: Entity,
-//     depth: usize,
-//     materials: &mut ResMut<Assets<StandardMaterial>>,
-//     meshes: &mut ResMut<Assets<Mesh>>,
-// ) {
-//     // Reaches the leaf. A leaf is only a position marker for its parent's tail.
-//     let res = children_query.get(parent_joint);
-//     if res.is_err() {
-//         return;
-//     }
-//
-//     let marker_radius = 0.01;
-//
-//     let marker_mesh = PbrBundle {
-//         mesh: meshes.add(
-//             Mesh::try_from(shape::Icosphere {
-//                 radius: marker_radius as f32,
-//                 ..default()
-//             })
-//                 .unwrap(),
-//         ),
-//         material: materials.add(StandardMaterial::from(Color::rgb(0.2, 0.7, 0.9))),
-//         ..default()
-//     };
-//
-//     let children = res.unwrap();
-//     for child in children {
-//         for _ in 0..depth {
-//             print!("-");
-//         }
-//         println!("{:?}", child);
-//
-//         let (xform, global_xform) = transform_query.get(*child).unwrap();
-//
-//         let (parent_xform, parent_global_xform) = transform_query.get(parent_joint).unwrap();
-//
-//         let global_position: Vector = global_xform.translation().into();
-//
-//         let parent_global_position: Vector = parent_global_xform.translation().into();
-//
-//         let global_joint_length =
-//             (parent_global_xform.translation() - global_xform.translation()).length();
-//
-//         // Should be equal to global_joint_length.
-//         let joint_distance = xform.translation.length();
-//
-//         assert!((global_joint_length - joint_distance) < 0.0001);
-//
-//         let spring_length = (joint_distance - 0.02) * 0.2;
-//
-//         // Spawn dynamic body for the child bone, connecting it to its parent with joints.
-//         commands.entity(*child).insert((
-//             RigidBody::Dynamic,
-//             Position(global_position),
-//             Collider::ball(0.01),
-//             MassPropertiesBundle::new_computed(&Collider::ball(0.01), 1.0),
-//         ));
-//
-//         {
-//             let joint_marker = commands.spawn((marker_mesh.clone(), )).id();
-//
-//             commands.entity(*child).push_children(&[joint_marker]);
-//         }
-//
-//         let mut joint = FixedJoint::new(*child, parent_joint)
-//             .with_local_anchor_1(Vector::new(0.0, -0.01, 0.0))
-//             .with_local_anchor_2(Vector::new(0.0, 0.01, 0.0));
-//         joint.compliance = 0.01;
-//
-//         // let joint2 = DistanceJoint::new(*child, parent_joint)
-//         //     .with_local_anchor_1(Vector::new(0.0, -0.01, 0.0))
-//         //     .with_local_anchor_2(Vector::new(0.0, 0.01, 0.0))
-//         //     .with_rest_length(spring_length.into())
-//         //     .with_limits(0.9 * spring_length, 1.1 * spring_length)
-//         //     .with_linear_velocity_damping(0.1)
-//         //     .with_angular_velocity_damping(1.0)
-//         //     .with_compliance(1.0 / 100.0);
-//
-//         let joint3 = SpringConstraint {
-//             entity1: parent_joint,
-//             entity2: *child,
-//             relative_rest_position: parent_global_position - global_position,
-//             lagrange: 0.0,
-//             compliance: 1.0 / 100.0,
-//         };
-//
-//         commands.spawn(joint3);
-//
-//         // Apply wind force.
-//         let mut force = ExternalForce::default();
-//         force.apply_force(Vector::X);
-//         commands
-//             .entity(*child)
-//             .insert((RigidBody::Dynamic, Wind, force));
-//
-//         spawn_joints_recursively(
-//             commands,
-//             children_query,
-//             transform_query,
-//             *child,
-//             depth + 1,
-//             materials,
-//             meshes,
-//         );
-//     }
-// }
-//
-// #[derive(Component)]
-// struct SpringConstraint {
-//     entity1: Entity,
-//     entity2: Entity,
-//     // Relative position from entity2 to entity1.
-//     relative_rest_position: Vector,
-//     lagrange: Scalar,
-//     compliance: Scalar,
-// }
-//
-// impl PositionConstraint for SpringConstraint {}
-//
-// impl XpbdConstraint<2> for SpringConstraint {
-//     fn entities(&self) -> [Entity; 2] {
-//         [self.entity1, self.entity2]
-//     }
-//
-//     fn clear_lagrange_multipliers(&mut self) {
-//         self.lagrange = 0.0;
-//     }
-//
-//     fn solve(&mut self, bodies: [&mut RigidBodyQueryItem; 2], dt: Scalar) {
-//         let [body1, body2] = bodies;
-//
-//         // Local attachment points at the centers of the bodies for simplicity.
-//         let [r1, r2] = [Vector::ZERO, Vector::ZERO];
-//
-//         // Compute the positional difference.
-//         let delta_pos = body1.current_position() - body2.current_position();
-//
-//         // The current separation distance.
-//         let length = delta_pos.length();
-//
-//         // The value of the constraint function. When this is zero, the constraint is satisfied.
-//         let c = delta_pos - self.relative_rest_position;
-//
-//         // Avoid division by zero and unnecessary computation.
-//         if length <= 0.0 || c.length() == 0.0 {
-//             return;
-//         }
-//
-//         let n = c.normalize();
-//
-//         // Compute generalized inverse masses (method from PositionConstraint).
-//         let w1 = self.compute_generalized_inverse_mass(body1, r1, n);
-//         let w2 = self.compute_generalized_inverse_mass(body2, r2, n);
-//         let w = [w1, w2];
-//
-//         // Constraint gradients, i.e. how the bodies should be moved
-//         // relative to each other in order to satisfy the constraint.
-//         let gradients = [n, -n];
-//
-//         // Compute Lagrange multiplier update, essentially the signed magnitude of the correction.
-//         let delta_lagrange = self.compute_lagrange_update(
-//             self.lagrange,
-//             c.length(),
-//             &gradients,
-//             &w,
-//             self.compliance,
-//             dt,
-//         );
-//         self.lagrange += delta_lagrange;
-//
-//         // Apply positional correction (method from PositionConstraint)
-//         self.apply_positional_correction(body1, body2, delta_lagrange, n, r1, r2);
-//     }
-// }
+    if !*setup {
+        *setup = true;
+    } else {
+        return;
+    }
+
+    // for e in gltf_query.iter() {
+    //     let json_string = serde_json::to_string_pretty(&e.value).unwrap();
+    //     println!("{:?}", json_string);
+    // }
+
+    println!("Skinned mesh joints with spring bone:");
+
+    let mut root_spring_bone_joints: Vec<Entity> = vec![];
+
+    let mut found_scene_entity = false;
+
+    for (entity, mesh) in &skinned_mesh_query {
+        if found_scene_entity {
+            break;
+        }
+
+        for joint in &mesh.joints {
+            let joint_name = name_query.get(*joint).unwrap();
+
+            // println!("{}", joint_name.as_str());
+
+            for vrm in &vrm_query {
+                if vrm
+                    .spring_bone_roots
+                    .contains(&joint_name.as_str().to_string())
+                {
+                    println!("{}", joint_name.as_str());
+                    root_spring_bone_joints.push(*joint);
+                    found_scene_entity = true;
+                }
+            }
+        }
+    }
+
+    println!("Root spring bone joints: {:?}", root_spring_bone_joints);
+
+    let marker_radius = 0.01;
+
+    let marker_mesh = PbrBundle {
+        mesh: meshes.add(
+            Mesh::try_from(shape::Icosphere {
+                radius: marker_radius as f32,
+                ..default()
+            })
+                .unwrap(),
+        ),
+        material: materials.add(StandardMaterial::from(Color::RED)),
+        ..default()
+    };
+
+    for joint in root_spring_bone_joints {
+        let (xform, global_xform) = transform_query.get(joint).unwrap();
+        let global_position = global_xform.translation().into();
+
+        // Spawn a kinematic body in the root joint.
+        commands.entity(joint).insert((
+            RigidBody::Kinematic,
+            Controllable {
+                original_local_transform: *xform,
+            },
+            Collider::ball(0.01),
+            Position(global_position),
+        ));
+
+        {
+            let joint_marker = commands.spawn((marker_mesh.clone(), )).id();
+
+            commands.entity(joint).push_children(&[joint_marker]);
+        }
+
+        spawn_joints_recursively(
+            &mut commands,
+            &children_query,
+            &transform_query,
+            joint,
+            1,
+            &mut materials,
+            &mut meshes,
+        );
+    }
+
+    println!("Spring bone setup finished");
+}
+
+fn update_position_of_root_joints(
+    mut query: Query<(Entity, &mut Position, &Controllable)>,
+    parent_query: Query<&Parent>,
+    transform_query: Query<(&Transform, &GlobalTransform)>,
+) {
+    for (entity, mut pos, control) in query.iter_mut() {
+        let parent_entity = parent_query.get(entity).unwrap().get();
+        let (_, parent_global_xform) = transform_query.get(parent_entity).unwrap();
+
+        let new_global_xform = parent_global_xform.mul_transform(control.original_local_transform);
+        let translation = new_global_xform.translation();
+
+        // pos.x = translation.x;
+        // pos.y = translation.y;
+        // pos.z = translation.z;
+    }
+}
+
+fn spawn_joints_recursively(
+    commands: &mut Commands,
+    children_query: &Query<&Children>,
+    transform_query: &Query<(&Transform, &GlobalTransform)>,
+    parent_joint: Entity,
+    depth: usize,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    meshes: &mut ResMut<Assets<Mesh>>,
+) {
+    // Reaches the leaf. A leaf is only a position marker for its parent's tail.
+    let res = children_query.get(parent_joint);
+    if res.is_err() {
+        return;
+    }
+
+    let marker_radius = 0.01;
+
+    let marker_mesh = PbrBundle {
+        mesh: meshes.add(
+            Mesh::try_from(shape::Icosphere {
+                radius: marker_radius as f32,
+                ..default()
+            })
+                .unwrap(),
+        ),
+        material: materials.add(StandardMaterial::from(Color::rgb(0.2, 0.7, 0.9))),
+        ..default()
+    };
+
+    let children = res.unwrap();
+    for child in children {
+        for _ in 0..depth {
+            print!("-");
+        }
+        println!("{:?}", child);
+
+        let (xform, global_xform) = transform_query.get(*child).unwrap();
+
+        let (parent_xform, parent_global_xform) = transform_query.get(parent_joint).unwrap();
+
+        let global_position: Vector = global_xform.translation().into();
+
+        let parent_global_position: Vector = parent_global_xform.translation().into();
+
+        let global_joint_length =
+            (parent_global_xform.translation() - global_xform.translation()).length();
+
+        // Should be equal to global_joint_length.
+        let joint_distance = xform.translation.length();
+
+        assert!((global_joint_length - joint_distance) < 0.0001);
+
+        let spring_length = (joint_distance - 0.02) * 0.2;
+
+        // Spawn dynamic body for the child bone, connecting it to its parent with joints.
+        commands.entity(*child).insert((
+            RigidBody::Dynamic,
+            Position(global_position),
+            Collider::ball(0.01),
+            MassPropertiesBundle::new_computed(&Collider::ball(0.01), 1.0),
+        ));
+
+        {
+            let joint_marker = commands.spawn((marker_mesh.clone(), )).id();
+
+            commands.entity(*child).push_children(&[joint_marker]);
+        }
+
+        let mut joint = FixedJoint::new(*child, parent_joint)
+            .with_local_anchor_1(Vector::new(0.0, -0.01, 0.0))
+            .with_local_anchor_2(Vector::new(0.0, 0.01, 0.0));
+        joint.compliance = 0.01;
+
+        // let joint2 = DistanceJoint::new(*child, parent_joint)
+        //     .with_local_anchor_1(Vector::new(0.0, -0.01, 0.0))
+        //     .with_local_anchor_2(Vector::new(0.0, 0.01, 0.0))
+        //     .with_rest_length(spring_length.into())
+        //     .with_limits(0.9 * spring_length, 1.1 * spring_length)
+        //     .with_linear_velocity_damping(0.1)
+        //     .with_angular_velocity_damping(1.0)
+        //     .with_compliance(1.0 / 100.0);
+
+        let joint3 = SpringConstraint {
+            entity1: parent_joint,
+            entity2: *child,
+            relative_rest_position: parent_global_position - global_position,
+            lagrange: 0.0,
+            compliance: 1.0 / 100.0,
+        };
+
+        commands.spawn(joint3);
+
+        // Apply wind force.
+        let mut force = ExternalForce::default();
+        force.apply_force(Vector::X);
+        commands
+            .entity(*child)
+            .insert((RigidBody::Dynamic, Wind, force));
+
+        spawn_joints_recursively(
+            commands,
+            children_query,
+            transform_query,
+            *child,
+            depth + 1,
+            materials,
+            meshes,
+        );
+    }
+}
+
+#[derive(Component)]
+struct SpringConstraint {
+    entity1: Entity,
+    entity2: Entity,
+    // Relative position from entity2 to entity1.
+    relative_rest_position: Vector,
+    lagrange: Scalar,
+    compliance: Scalar,
+}
+
+impl PositionConstraint for SpringConstraint {}
+
+impl XpbdConstraint<2> for SpringConstraint {
+    fn entities(&self) -> [Entity; 2] {
+        [self.entity1, self.entity2]
+    }
+
+    fn clear_lagrange_multipliers(&mut self) {
+        self.lagrange = 0.0;
+    }
+
+    fn solve(&mut self, bodies: [&mut RigidBodyQueryItem; 2], dt: Scalar) {
+        let [body1, body2] = bodies;
+
+        // Local attachment points at the centers of the bodies for simplicity.
+        let [r1, r2] = [Vector::ZERO, Vector::ZERO];
+
+        // Compute the positional difference.
+        let delta_pos = body1.current_position() - body2.current_position();
+
+        // The current separation distance.
+        let length = delta_pos.length();
+
+        // The value of the constraint function. When this is zero, the constraint is satisfied.
+        let c = delta_pos - self.relative_rest_position;
+
+        // Avoid division by zero and unnecessary computation.
+        if length <= 0.0 || c.length() == 0.0 {
+            return;
+        }
+
+        let n = c.normalize();
+
+        // Compute generalized inverse masses (method from PositionConstraint).
+        let w1 = self.compute_generalized_inverse_mass(body1, r1, n);
+        let w2 = self.compute_generalized_inverse_mass(body2, r2, n);
+        let w = [w1, w2];
+
+        // Constraint gradients, i.e. how the bodies should be moved
+        // relative to each other in order to satisfy the constraint.
+        let gradients = [n, -n];
+
+        // Compute Lagrange multiplier update, essentially the signed magnitude of the correction.
+        let delta_lagrange = self.compute_lagrange_update(
+            self.lagrange,
+            c.length(),
+            &gradients,
+            &w,
+            self.compliance,
+            dt,
+        );
+        self.lagrange += delta_lagrange;
+
+        // Apply positional correction (method from PositionConstraint)
+        self.apply_positional_correction(body1, body2, delta_lagrange, n, r1, r2);
+    }
+}
 
 #[derive(Component)]
 struct Wind;
 
-// fn blow_wind(time: Res<Time>, mut query: Query<(&mut ExternalForce, With<Wind>)>) {
-//     let f = Vector::X * 0.02 * (time.elapsed_seconds().sin() as f64 + 1.0);
-//     // println!("F: {}", f);
-//
-//     for (mut force, _) in query.iter_mut() {
-//         force.clear();
-//         force.apply_force(f);
-//     }
-// }
+fn blow_wind(time: Res<Time>, mut query: Query<(&mut ExternalForce, With<Wind>)>) {
+    let f = Vector::X * 0.02 * (time.elapsed_seconds().sin() as f64 + 1.0);
+    // println!("F: {}", f);
+
+    for (mut force, _) in query.iter_mut() {
+        force.clear();
+        force.apply_force(f);
+    }
+}

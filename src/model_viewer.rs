@@ -49,8 +49,8 @@ fn setup_model_viewer(
             material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
             ..default()
         },
-        // RigidBody::Static,
-        // Collider::cuboid(8.0, 0.002, 8.0),
+        RigidBody::Static,
+        Collider::cuboid(8.0, 0.002, 8.0),
     ));
 
     // Cube
@@ -60,10 +60,10 @@ fn setup_model_viewer(
             material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
             ..default()
         },
-        // RigidBody::Dynamic,
-        // Position(DVec3::Y * 8.0),
-        // AngularVelocity(DVec3::new(2.5, 3.4, 1.6)),
-        // Collider::cuboid(1.0, 1.0, 1.0),
+        RigidBody::Dynamic,
+        Position(DVec3::Y * 8.0),
+        AngularVelocity(DVec3::new(2.5, 3.4, 1.6)),
+        Collider::cuboid(1.0, 1.0, 1.0),
     ));
 
     // Add skybox.
