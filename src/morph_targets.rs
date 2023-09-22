@@ -1,6 +1,7 @@
 use crate::morph_viewer_plugin::WeightsControl;
 use bevy::gltf::GltfExtras;
 use bevy::prelude::*;
+use bevy::render::mesh::morph::MeshMorphWeights;
 use bevy::render::mesh::skinning::SkinnedMesh;
 use bevy_xpbd_3d::{math::*, prelude::*, SubstepSchedule, SubstepSet};
 use gltf::Gltf;
@@ -13,7 +14,6 @@ use serde;
 use std::cmp::{max, min};
 use std::f32::consts::PI;
 use std::time::SystemTime;
-use bevy::render::mesh::morph::MeshMorphWeights;
 
 pub struct VrmPlugin;
 
@@ -29,20 +29,20 @@ impl Plugin for VrmPlugin {
             brightness: 1.0,
             ..default()
         })
-            .add_systems(Startup, (setup))
-            .add_systems(
-                Update,
-                (
-                    setup_morphs,
-                    setup_animations,
-                    setup_spring_bones,
-                    update_shape,
-                    blow_wind,
-                ),
-            )
-            // Physics engine.
-            .add_plugins(PhysicsPlugins::default())
-            .insert_resource(Gravity(Vector::NEG_Y * 9.8));
+        .add_systems(Startup, (setup))
+        .add_systems(
+            Update,
+            (
+                setup_morphs,
+                setup_animations,
+                setup_spring_bones,
+                update_shape,
+                blow_wind,
+            ),
+        )
+        // Physics engine.
+        .add_plugins(PhysicsPlugins::default())
+        .insert_resource(Gravity(Vector::NEG_Y * 9.8));
 
         // Get physics substep schedule and add our custom distance constraint
         let substeps = app
@@ -71,6 +71,15 @@ struct VrmData {
     pub spring_bone_roots: Vec<String>,
     // anim: Handle<AnimationClip>,
     // mesh: Handle<Mesh>,
+    pub shape_keys: ShapeKeys,
+}
+
+struct ShapeKeys {
+    a: u32,
+    i: u32,
+    u: u32,
+    e: u32,
+    o: u32,
 }
 
 fn setup(asset_server: Res<AssetServer>, mut commands: Commands) {
@@ -141,6 +150,35 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands) {
             if let Some(vrm) = extensions.custom.vrm.as_ref() {
                 let mut spring_bone_roots = vec![];
 
+                let mut shape_keys = ShapeKeys {
+                    a: 0,
+                    i: 0,
+                    u: 0,
+                    e: 0,
+                    o: 0,
+                };
+
+                for shape_group in &vrm.blend_shape_master.blend_shape_groups {
+                    match shape_group.name.as_str() {
+                        "A" => {
+                            shape_keys.a = shape_group.binds.get(0).unwrap().index;
+                        }
+                        "I" => {
+                            shape_keys.i = shape_group.binds.get(0).unwrap().index;
+                        }
+                        "U" => {
+                            shape_keys.u = shape_group.binds.get(0).unwrap().index;
+                        }
+                        "E" => {
+                            shape_keys.e = shape_group.binds.get(0).unwrap().index;
+                        }
+                        "O" => {
+                            shape_keys.o = shape_group.binds.get(0).unwrap().index;
+                        }
+                        _ => {}
+                    }
+                }
+
                 for bone_group in &vrm.secondary_animation.bone_groups {
                     for bone_index in &bone_group.bones {
                         let bone = nodes[*bone_index as usize];
@@ -151,7 +189,10 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands) {
                     }
                 }
 
-                vrm_scene.insert(VrmData { spring_bone_roots });
+                vrm_scene.insert(VrmData {
+                    spring_bone_roots,
+                    shape_keys,
+                });
             }
         }
     }
@@ -181,16 +222,14 @@ fn update_shape(
     controls: Option<ResMut<WeightsControl>>,
     mut speech_audio: ResMut<SpeechAudio>,
     mut morphs: Query<&mut MorphWeights>,
-    music_controller: Query<&AudioSink, With<MySpeechAudio>>,
+    vrm_query: Query<&VrmData>,
     time: Res<Time>,
 ) {
-    // if let Ok(sink) = music_controller.get_single() {
-    //     sink.set_speed(((time.elapsed_seconds() / 5.0).sin() + 1.0).max(0.1));
-    // }
-
     if !speech_audio.playing {
         return;
     }
+
+    let vrm = vrm_query.get_single();
 
     match speech_audio.start_time.elapsed() {
         Ok(elapsed) => {
@@ -235,14 +274,32 @@ fn update_shape(
                     let Some(mut controls) = controls else {
                         return;
                     };
-                    for (i, target) in controls.weights.iter_mut().enumerate() {
-                        let new_weight = if estimate.vowel == i as i32 {
-                            estimate.amount
-                        } else {
-                            0.0
-                        };
 
-                        target.weight = new_weight;
+                    let Ok(vrm) = vrm else {
+                        return;
+                    };
+
+                    for target in &mut controls.weights {
+                        target.weight = 0.0;
+                    }
+
+                    match estimate.vowel {
+                        0 => {
+                            controls.weights[vrm.shape_keys.a as usize].weight = estimate.amount;
+                        },
+                        1 => {
+                            controls.weights[vrm.shape_keys.i as usize].weight = estimate.amount;
+                        },
+                        2 => {
+                            controls.weights[vrm.shape_keys.u as usize].weight = estimate.amount;
+                        },
+                        3 => {
+                            controls.weights[vrm.shape_keys.e as usize].weight = estimate.amount;
+                        },
+                        4 => {
+                            controls.weights[vrm.shape_keys.o as usize].weight = estimate.amount;
+                        },
+                        _ => {}
                     }
                 }
 
@@ -371,7 +428,7 @@ fn setup_spring_bones(
                 radius: marker_radius as f32,
                 ..default()
             })
-                .unwrap(),
+            .unwrap(),
         ),
         material: materials.add(StandardMaterial::from(Color::RED)),
         ..default()
@@ -392,7 +449,7 @@ fn setup_spring_bones(
         ));
 
         {
-            let joint_marker = commands.spawn((marker_mesh.clone(), )).id();
+            let joint_marker = commands.spawn((marker_mesh.clone(),)).id();
 
             commands.entity(joint).push_children(&[joint_marker]);
         }
@@ -452,7 +509,7 @@ fn spawn_joints_recursively(
                 radius: marker_radius as f32,
                 ..default()
             })
-                .unwrap(),
+            .unwrap(),
         ),
         material: materials.add(StandardMaterial::from(Color::rgb(0.2, 0.7, 0.9))),
         ..default()
@@ -492,7 +549,7 @@ fn spawn_joints_recursively(
         ));
 
         {
-            let joint_marker = commands.spawn((marker_mesh.clone(), )).id();
+            let joint_marker = commands.spawn((marker_mesh.clone(),)).id();
 
             commands.entity(*child).push_children(&[joint_marker]);
         }
