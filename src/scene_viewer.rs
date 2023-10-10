@@ -15,20 +15,16 @@ use crate::camera;
 use crate::camera::PanOrbitCamera;
 use bevy_xpbd_3d::{math::*, prelude::*};
 
-pub struct ModelViewerPlugin;
+pub struct SceneViewerPlugin;
 
-impl Plugin for ModelViewerPlugin {
+impl Plugin for SceneViewerPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(AmbientLight {
-            color: Color::WHITE,
-            brightness: 1.0 / 5.0f32,
-        })
-        .add_systems(Startup, setup_model_viewer)
-        .add_systems(Update, (animate_light_direction, skybox_asset_loaded))
-        .add_systems(
-            Update,
-            (camera::pan_orbit_camera, camera::move_camera_by_keyboard),
-        );
+        app.add_systems(Startup, setup_scene_viewer)
+            .add_systems(Update, (animate_light_direction, skybox_asset_loaded))
+            .add_systems(
+                Update,
+                (camera::pan_orbit_camera, camera::move_camera_by_keyboard),
+            );
     }
 }
 
@@ -39,12 +35,20 @@ struct Cubemap {
     image_handle: Handle<Image>,
 }
 
-fn setup_model_viewer(
+fn setup_scene_viewer(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    // Ambient light
+    // NOTE: The ambient light is used to scale how bright the environment map is so with a bright
+    // environment map, use an appropriate color and brightness to match.
+    commands.insert_resource(AmbientLight {
+        color: Color::rgb_u8(210, 220, 240),
+        brightness: 1.0,
+    });
+
     // Plane
     commands.spawn((
         PbrBundle {
@@ -72,13 +76,11 @@ fn setup_model_viewer(
     // Add skybox.
     let skybox_handle = asset_server.load("textures/Ryfjallet_cubemap.png");
 
-    // Ambient light
-    // NOTE: The ambient light is used to scale how bright the environment map is so with a bright
-    // environment map, use an appropriate color and brightness to match
-    // commands.insert_resource(AmbientLight {
-    //     color: Color::rgb_u8(210, 220, 240),
-    //     brightness: 1.0,
-    // });
+    commands.insert_resource(Cubemap {
+        is_loaded: false,
+        index: 0,
+        image_handle: skybox_handle.clone(),
+    });
 
     // Add a gltf scene.
     // commands
@@ -103,19 +105,13 @@ fn setup_model_viewer(
                     ..Default::default()
                 },
                 // Add skybox as component to the camera.
-                Skybox(skybox_handle.clone()),
+                Skybox(skybox_handle),
             ))
             .insert(PanOrbitCamera {
                 radius,
                 ..Default::default()
             });
     }
-
-    commands.insert_resource(Cubemap {
-        is_loaded: false,
-        index: 0,
-        image_handle: skybox_handle,
-    });
 
     // Add a light.
     commands.spawn(DirectionalLightBundle {

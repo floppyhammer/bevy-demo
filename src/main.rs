@@ -9,23 +9,21 @@ use std::slice::Windows;
 mod animated_sprite;
 mod camera;
 mod debug_label;
-mod model_viewer;
 mod morph_targets;
 mod morph_viewer_plugin;
+mod scene_viewer;
 mod vrm_gltf;
+
 pub use gltf::json as gltf_json;
 
 use crate::debug_label::DebugLabelPlugin;
-use crate::model_viewer::ModelViewerPlugin;
 use crate::morph_targets::VrmPlugin;
 use crate::morph_viewer_plugin::MorphViewerPlugin;
+use crate::scene_viewer::SceneViewerPlugin;
 
 fn main() {
-    let mut a = Transform::from_translation(Vec3::new(10.0, 0.0, 0.0));
-    a.look_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Z);
-    let mat = a.compute_matrix();
     App::new()
-        .insert_resource(Msaa::Off)
+        .insert_resource(Msaa::Sample4)
         .insert_resource(ClearColor {
             0: Color::rgb(0.1, 0.1, 0.1),
         })
@@ -38,15 +36,12 @@ fn main() {
                     }),
                     ..default()
                 })
-                .set(ImagePlugin::default_nearest()),
+                .set(ImagePlugin::default_linear()),
         )
         // .add_plugins(WorldInspectorPlugin::new())
-        .add_plugins(ModelViewerPlugin)
-        // .add_systems(Startup, player_setup)
+        .add_plugins(SceneViewerPlugin)
         .add_plugins(DebugLabelPlugin)
-        // .add_plugins(PlayerControllerPlugin)
-        // .add_plugins(AnimatedSpritePlugin)
+        .add_plugins(AnimatedSpritePlugin)
         .add_plugins((VrmPlugin, MorphViewerPlugin))
-        // .add_plugins(EditorPlugin::default())
         .run();
 }

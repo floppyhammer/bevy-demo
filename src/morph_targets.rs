@@ -25,24 +25,20 @@ const LIP_SYNC_SAMPLE_RANGE_LENGTH: u32 = 100;
 
 impl Plugin for VrmPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(AmbientLight {
-            brightness: 1.0,
-            ..default()
-        })
-        .add_systems(Startup, (setup))
-        .add_systems(
-            Update,
-            (
-                setup_morphs,
-                setup_animations,
-                setup_spring_bones,
-                update_shape,
-                blow_wind,
-            ),
-        )
-        // Physics engine.
-        .add_plugins(PhysicsPlugins::default())
-        .insert_resource(Gravity(Vector::NEG_Y * 9.8));
+        app.add_systems(Startup, (setup))
+            .add_systems(
+                Update,
+                (
+                    setup_morphs,
+                    setup_animations,
+                    setup_spring_bones,
+                    update_shape,
+                    blow_wind,
+                ),
+            )
+            // Physics engine.
+            .add_plugins(PhysicsPlugins::default())
+            .insert_resource(Gravity(Vector::NEG_Y * 9.8));
 
         // Get physics substep schedule and add our custom distance constraint
         let substeps = app
