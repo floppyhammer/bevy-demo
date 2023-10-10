@@ -7,24 +7,18 @@ use bevy::window::{ExitCondition, WindowMode, WindowResolution};
 use std::slice::Windows;
 
 mod animated_sprite;
-mod camera3d;
+mod camera;
 mod debug_label;
 mod model_viewer;
 mod morph_targets;
-mod player;
-mod player_controller;
-
 mod morph_viewer_plugin;
 mod vrm_gltf;
 pub use gltf::json as gltf_json;
 
-use crate::camera3d::spawn_camera;
 use crate::debug_label::DebugLabelPlugin;
 use crate::model_viewer::ModelViewerPlugin;
 use crate::morph_targets::VrmPlugin;
 use crate::morph_viewer_plugin::MorphViewerPlugin;
-use crate::player::player_setup;
-use crate::player_controller::PlayerControllerPlugin;
 
 fn main() {
     let mut a = Transform::from_translation(Vec3::new(10.0, 0.0, 0.0));

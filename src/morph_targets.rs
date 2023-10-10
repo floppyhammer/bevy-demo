@@ -286,19 +286,19 @@ fn update_shape(
                     match estimate.vowel {
                         0 => {
                             controls.weights[vrm.shape_keys.a as usize].weight = estimate.amount;
-                        },
+                        }
                         1 => {
                             controls.weights[vrm.shape_keys.i as usize].weight = estimate.amount;
-                        },
+                        }
                         2 => {
                             controls.weights[vrm.shape_keys.u as usize].weight = estimate.amount;
-                        },
+                        }
                         3 => {
                             controls.weights[vrm.shape_keys.e as usize].weight = estimate.amount;
-                        },
+                        }
                         4 => {
                             controls.weights[vrm.shape_keys.o as usize].weight = estimate.amount;
-                        },
+                        }
                         _ => {}
                     }
                 }
@@ -336,7 +336,7 @@ fn setup_morphs(
     //     return;
     // };
 
-    for (weight) in &morph_target_weights {
+    for weight in &morph_target_weights {
         // let Some(names) = mesh.morph_target_names() else {
         //     continue;
         // };

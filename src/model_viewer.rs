@@ -11,8 +11,8 @@ use bevy::{
     },
 };
 
-use crate::camera3d;
-use crate::camera3d::PanOrbitCamera;
+use crate::camera;
+use crate::camera::PanOrbitCamera;
 use bevy_xpbd_3d::{math::*, prelude::*};
 
 pub struct ModelViewerPlugin;
@@ -25,7 +25,10 @@ impl Plugin for ModelViewerPlugin {
         })
         .add_systems(Startup, setup_model_viewer)
         .add_systems(Update, (animate_light_direction, skybox_asset_loaded))
-        .add_systems(Update, (camera3d::pan_orbit_camera));
+        .add_systems(
+            Update,
+            (camera::pan_orbit_camera, camera::move_camera_by_keyboard),
+        );
     }
 }
 

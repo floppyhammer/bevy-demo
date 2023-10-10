@@ -118,4 +118,36 @@ pub(crate) fn pan_orbit_camera(
     }
 }
 
-pub fn spawn_camera(commands: &mut Commands) {}
+pub(crate) fn move_camera_by_keyboard(
+    time: Res<Time>,
+    mut query: Query<(&mut PanOrbitCamera, &mut Transform)>,
+    window_query: Query<&Window>,
+    keyboard_input: Res<Input<KeyCode>>,
+) {
+    let mut dir = Vec2::new(0.0, 0.0);
+
+    if keyboard_input.pressed(KeyCode::Right) {
+        dir.x = 1.0;
+    } else if keyboard_input.pressed(KeyCode::Left) {
+        dir.x = -1.0;
+    }
+    if keyboard_input.pressed(KeyCode::Up) {
+        dir.y = 1.0;
+    } else if keyboard_input.pressed(KeyCode::Down) {
+        dir.y = -1.0;
+    }
+
+    if dir.length() != 0.0 {
+        dir = dir.normalize();
+    }
+
+    let speed = 0.1;
+
+    // `Transform.translation` will determine the location of the text.
+    // `Transform.scale` and `Transform.rotation` do not yet affect text (though you can set the
+    // size of the text via `Text.style.font_size`)
+    for (_, mut transform) in query.iter_mut() {
+        transform.translation.x += dir.x * speed * time.delta_seconds();
+        transform.translation.y += dir.y * speed * time.delta_seconds();
+    }
+}
