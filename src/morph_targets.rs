@@ -1,8 +1,11 @@
 use crate::morph_viewer_plugin::WeightsControl;
-use bevy::gltf::GltfExtras;
-use bevy::prelude::*;
-use bevy::render::mesh::morph::MeshMorphWeights;
-use bevy::render::mesh::skinning::SkinnedMesh;
+use bevy::{
+    ecs::entity::{EntityMapper, MapEntities},
+    gltf::GltfExtras,
+    prelude::*,
+    render::mesh::morph::MeshMorphWeights,
+    render::mesh::skinning::SkinnedMesh,
+};
 use bevy_xpbd_3d::{math::*, prelude::*, SubstepSchedule, SubstepSet};
 use gltf::Gltf;
 use kira::{
@@ -658,6 +661,13 @@ impl XpbdConstraint<2> for SpringConstraint {
 
         // Apply positional correction (method from PositionConstraint)
         self.apply_positional_correction(body1, body2, delta_lagrange, n, r1, r2);
+    }
+}
+
+impl MapEntities for SpringConstraint {
+    fn map_entities(&mut self, entity_mapper: &mut EntityMapper) {
+        self.entity1 = entity_mapper.get_or_reserve(self.entity1);
+        self.entity2 = entity_mapper.get_or_reserve(self.entity2);
     }
 }
 

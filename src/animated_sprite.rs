@@ -52,7 +52,8 @@ pub fn spawn_animated_sprite(
     const SPRITE_SIZE: f32 = 78.0;
 
     // Create atlas from texture.
-    let texture_atlas = TextureAtlas::from_grid(texture, Vec2::splat(SPRITE_SIZE), 4, 1, None, None);
+    let texture_atlas =
+        TextureAtlas::from_grid(texture, Vec2::splat(SPRITE_SIZE), 4, 1, None, None);
 
     let texture_atlas = texture_atlases.add(texture_atlas);
 
@@ -63,7 +64,8 @@ pub fn spawn_animated_sprite(
     commands
         .spawn(SpriteSheetBundle {
             texture_atlas,
-            transform: Transform::from_translation(Vec3::new(200.0, 200.0, 0.0)) * Transform::from_scale(Vec3::splat(0.5)),
+            transform: Transform::from_translation(Vec3::new(200.0, 200.0, 0.0))
+                * Transform::from_scale(Vec3::splat(0.5)),
             ..Default::default()
         })
         .insert(AnimatedSpriteTimer(timer));
