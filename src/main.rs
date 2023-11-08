@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy::render::camera::RenderTarget::Image;
 use bevy::render::texture::DefaultImageSampler;
 use bevy::window::{ExitCondition, WindowMode, WindowResolution};
-// use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use std::slice::Windows;
 
 mod animated_sprite;
@@ -38,7 +38,7 @@ fn main() {
                 })
                 .set(ImagePlugin::default_linear()),
         )
-        // .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(SceneViewerPlugin)
         .add_plugins(DebugLabelPlugin)
         .add_plugins(AnimatedSpritePlugin)
