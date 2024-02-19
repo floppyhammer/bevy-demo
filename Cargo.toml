@@ -8,7 +8,7 @@ rust-version = "1.65.0"
 [dependencies]
 bevy = "0.12.0"
 bevy-inspector-egui = "0.21.0"
-rlip_sync = { git = "https://github.com/floppyhammer/rlip-sync.git" }
+rlip_sync = { git = "https://github.com/floppyhammer/real-time-lip-sync-gd.git", branch = "gdnative-removed" }
 kira = "0.8.5"
 bevy_xpbd_3d = { version = "0.3.1", default-features = false, features = ["3d", "f64"] }
 gltf = { git = "https://github.com/floppyhammer/gltf.git", branch = "third-party-extensions", default-features = false, features = ["names"] }
